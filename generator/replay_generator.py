@@ -9,13 +9,18 @@ class ReplayGenerator:
         os.makedirs(output_dir, exist_ok=True)
 
     def generate_python_script(self, attack: Dict[str, any], attack_id: int) -> str:
-        url = attack.get('full_url', '')
+        raw_url = attack.get('full_url', '')
         method = attack.get('method', 'GET')
         user_agent = attack.get('user_agent', 'Mozilla/5.0')
         attack_type = attack.get('attack_type', 'Unknown')
         
-        parsed_url = urlparse(url)
-        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}" if parsed_url.scheme else f"http://example.com{parsed_url.path}"
+        parsed_url = urlparse(raw_url)
+        if parsed_url.scheme:
+            full_url = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
+            if parsed_url.query:
+                full_url += f"?{parsed_url.query}"
+        else:
+            full_url = f"http://example.com{raw_url}"
         
         script = f'''#!/usr/bin/env python3
 import requests
@@ -35,7 +40,7 @@ print(f"[*] Original Timestamp: {{attack_info['timestamp']}}")
 print(f"[*] Method: {{attack_info['method']}}")
 print("-" * 60)
 
-url = "{url}"
+url = "{full_url}"
 headers = {{
     "User-Agent": "{user_agent}"
 }}
@@ -76,14 +81,22 @@ except Exception as e:
         return script
 
     def generate_curl_command(self, attack: Dict[str, any]) -> str:
-        url = attack.get('full_url', '')
+        raw_url = attack.get('full_url', '')
         method = attack.get('method', 'GET')
         user_agent = attack.get('user_agent', 'Mozilla/5.0')
+        
+        parsed_url = urlparse(raw_url)
+        if parsed_url.scheme:
+            full_url = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
+            if parsed_url.query:
+                full_url += f"?{parsed_url.query}"
+        else:
+            full_url = f"http://example.com{raw_url}"
         
         curl_cmd = f'curl -X {method} \\\n'
         curl_cmd += f'  -H "User-Agent: {user_agent}" \\\n'
         curl_cmd += f'  -i \\\n'
-        curl_cmd += f'  "{url}"'
+        curl_cmd += f'  "{full_url}"'
         
         return curl_cmd
 
