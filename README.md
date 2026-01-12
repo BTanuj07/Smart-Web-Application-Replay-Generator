@@ -1,461 +1,244 @@
-# 🔐 Smart Web Application Attack Replay Generator
+# AttackReplay Pro
 
-A Python-based security research tool that parses web server logs, automatically detects attack payloads, and generates executable replay scripts for security testing and ethical hacking purposes.
+Advanced Web Application Security Testing Platform with AI-powered attack detection and replay generation.
 
-## 📋 Table of Contents
+## 🚀 Features
 
-- [Features](#features)
-- [Project Structure](#project-structure)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Supported Attack Types](#supported-attack-types)
-- [Output Examples](#output-examples)
-- [Educational Purpose](#educational-purpose)
-- [License](#license)
+- **Smart Attack Detection**: Detects SQL injection, XSS, command injection, and more
+- **AI-Powered Analysis**: Uses Groq AI for unknown attack pattern detection
+- **ML-Based Learning**: Machine learning for behavioral analysis and anomaly detection
+- **HTTP Traffic Monitoring**: Built-in proxy for real-time traffic capture
+- **Custom Pattern Management**: Create and manage custom attack detection patterns
+- **Replay Script Generation**: Automatically generate Python and cURL attack scripts
+- **Comprehensive Dashboard**: Visual analysis with filtering and statistics
+- **Batch Processing**: Analyze multiple log files simultaneously
 
-## ✨ Features
+## 📦 Installation
 
-### Core Capabilities
+### Prerequisites
+- Python 3.8 or higher
+- pip package manager
 
-- **Log Parsing**: Supports Apache and Nginx web server log formats
-- **Attack Detection**: Uses regex pattern matching to identify common web attacks
-- **Automatic Extraction**: Captures IP addresses, timestamps, User-Agent, URLs, HTTP methods, and payloads
-- **Script Generation**: Creates both Python (requests) and cURL replay scripts
-- **Interactive Dashboard**: Streamlit-based web UI for easy analysis
-- **Comprehensive Reports**: JSON-formatted summary reports with detailed statistics
+### Install Dependencies
+```bash
+pip install -r requirements.txt
+```
 
-### Advanced Features (PostgreSQL Required)
+### Optional: ML Features
+For machine learning capabilities:
+```bash
+pip install -r requirements_ml.txt
+```
 
-- **Pattern Learning**: Automatically tracks unknown/suspicious requests for pattern discovery
-- **Batch Processing**: Analyze multiple log files simultaneously with aggregate statistics
-- **Timeline Visualization**: Interactive charts showing attack trends over time
-- **Custom Pattern Management**: Define and manage your own regex-based attack detection rules
-- **Analysis History**: Persistent storage of all log analyses with searchable history
-- **Automated Replay Execution**: Execute generated scripts and capture results programmatically
+## 🎯 Quick Start
 
-### Attack Detection Engine
+### 1. Start the Application
+```bash
+python flask_app.py
+```
+Or use the simple runner:
+```bash
+python run.py
+```
 
-The tool can detect the following attack types:
+### 2. Access Web Interface
+Open your browser and go to: `http://localhost:5000`
 
-- **SQL Injection** - UNION SELECT, OR 1=1, database manipulation
-- **Cross-Site Scripting (XSS)** - Script injections, event handlers, iframe attacks
-- **Directory Traversal** - Path traversal attempts, /etc/passwd access
-- **Command Injection** - Shell command execution, pipe operators
-- **File Inclusion** - LFI/RFI attempts, php:// wrappers, data:// URIs
+### 3. Upload Log Files
+- Go to "Upload & Analyze" page
+- Upload Apache/Nginx format log files
+- Enable "ML Based Learning" for advanced detection
+- View results in the Dashboard
+
+## 🧪 HTTP Traffic Testing
+
+Generate test attack traffic for analysis:
+
+### Quick Testing
+```bash
+python simple_http_tester.py
+```
+
+### Comprehensive Testing
+```bash
+python http_attack_tester.py
+```
+
+### Using Menu Scripts
+**Windows:**
+```cmd
+run_http_tests.bat
+```
+
+**Linux/Mac:**
+```bash
+./run_http_tests.sh
+```
+
+See [HTTP_TESTING_README.md](HTTP_TESTING_README.md) for detailed testing instructions.
+
+## 📊 Usage Workflow
+
+1. **Generate Traffic**: Use HTTP testing tools or capture real traffic
+2. **Start Proxy** (optional): Use built-in HTTP proxy for traffic capture
+3. **Export Logs**: Export captured traffic in Apache/Nginx log format
+4. **Upload & Analyze**: Upload logs with ML-based learning enabled
+5. **Review Dashboard**: View detected attacks with filtering options
+6. **Manage Patterns**: Add custom attack detection patterns
+7. **Generate Scripts**: Create executable attack replay scripts
+
+## 🔧 Configuration
+
+### Database
+- **SQLite**: Default database (no setup required)
+- **PostgreSQL**: Set environment variables for production use
+
+### AI Integration
+- **Groq API**: Set API key for AI-based threat detection
+- **Content Filtering**: Automatic sanitization for AI analysis
+
+### Proxy Settings
+- **HTTP Proxy**: Built-in proxy on port 8080
+- **HTTPS Support**: SSL interception with certificate generation
 
 ## 📁 Project Structure
 
 ```
-smart-web-attack-replay-generator/
-│
-├── app.py                      # Main Streamlit application (9 tabs)
-├── sample.log                  # Sample log file with attack patterns
-├── README.md                   # This file
-├── pyproject.toml             # Python dependencies
-│
-├── parser/
-│   └── log_parser.py          # Log parsing module (LogParser class)
-│
-├── detector/
-│   └── attack_detector.py     # Attack detection with custom pattern support
-│
-├── generator/
-│   └── replay_generator.py    # Script generation module (ReplayGenerator class)
-│
-├── database/
-│   └── db_manager.py          # PostgreSQL database manager (optional)
-│
-├── batch/
-│   └── batch_processor.py     # Multi-file batch processing
-│
-└── generated_attacks/          # Output directory for generated scripts
-    ├── attack_1_SQL_Injection.py
-    ├── attack_1_SQL_Injection.sh
-    ├── attack_2_XSS.py
-    ├── attack_2_XSS.sh
-    └── attack_summary.json
+AttackReplay Pro/
+├── flask_app.py              # Main Flask application
+├── run.py                    # Simple startup script
+├── sample.log                # Sample log file for testing
+├── attack_replay.db          # SQLite database
+├── requirements.txt          # Python dependencies
+├── requirements_ml.txt       # ML dependencies
+├── http_attack_tester.py     # Comprehensive HTTP tester
+├── simple_http_tester.py     # Quick HTTP tester
+├── HTTP_TESTING_README.md    # HTTP testing documentation
+├── batch/                    # Batch processing modules
+├── database/                 # Database management
+├── detector/                 # Attack detection engines
+├── generator/                # Script generation
+├── ml/                       # Machine learning modules
+├── parser/                   # Log parsing utilities
+├── proxy/                    # HTTP/HTTPS proxy
+├── reporting/                # Report generation
+├── static/                   # Web assets
+├── templates/                # HTML templates
+└── uploads/                  # File upload directory
 ```
 
-## 🚀 Installation
+## 🎨 Web Interface
 
-### Prerequisites
+### Main Pages
+- **Dashboard**: Attack analysis with filtering
+- **Upload & Analyze**: Log file upload and processing
+- **Statistics**: Visual attack statistics and charts
+- **HTTP History**: Real-time traffic monitoring
+- **Custom Patterns**: Manage attack detection patterns
+- **Generate Scripts**: Create attack replay scripts
+- **Batch Processing**: Multi-file analysis
 
-- Python 3.11 or higher
-- pip package manager
+### Key Features
+- **Real-time Updates**: WebSocket-based live updates
+- **Responsive Design**: Works on desktop and mobile
+- **Dark/Light Theme**: Automatic theme detection
+- **Export Options**: Multiple export formats
+- **Filter Controls**: Advanced filtering and search
 
-### Setup Instructions
+## 🤖 AI & ML Features
 
-1. **Clone or download the project**
+### AI-Based Detection
+- **Groq Integration**: Advanced threat analysis
+- **Content Sanitization**: Safe AI processing
+- **Pattern Learning**: Automatic pattern recognition
 
-2. **Install dependencies**
+### Machine Learning
+- **Anomaly Detection**: Behavioral analysis
+- **Feature Extraction**: 50+ traffic features
+- **Ensemble Methods**: Multiple ML algorithms
+- **Unknown Pattern Detection**: Identifies new attack types
 
+## 🔒 Security Features
+
+### Attack Detection
+- **SQL Injection**: Multiple injection techniques
+- **XSS**: Cross-site scripting variants
+- **Command Injection**: System command execution
+- **Directory Traversal**: File system access
+- **File Inclusion**: Local/remote file inclusion
+- **NoSQL Injection**: MongoDB and similar
+- **LDAP Injection**: Directory service attacks
+- **XXE**: XML external entity attacks
+
+### Traffic Analysis
+- **Real-time Monitoring**: Live traffic capture
+- **SSL Interception**: HTTPS traffic analysis
+- **User Agent Analysis**: Suspicious tool detection
+- **Rate Limiting**: Rapid request detection
+
+## 📈 Analytics & Reporting
+
+### Dashboard Analytics
+- **Attack Statistics**: Counts and breakdowns
+- **IP Analysis**: Unique attackers
+- **Timeline Views**: Attack patterns over time
+- **Success Rates**: Attack effectiveness
+
+### Export Options
+- **Apache Log Format**: Standard web server logs
+- **JSON Export**: Structured data export
+- **Script Generation**: Executable attack scripts
+- **PDF Reports**: Comprehensive analysis reports
+
+## 🛠️ Development
+
+### Running in Development
 ```bash
-pip install streamlit pandas requests
+python flask_app.py
 ```
 
-Or using the project file:
-
+### Database Setup
 ```bash
-pip install -e .
+python database/setup_database.py
 ```
 
-3. **Verify installation**
-
+### Testing
+Use the HTTP testing tools to generate test traffic:
 ```bash
-streamlit --version
-python --version
+python http_attack_tester.py
 ```
-
-## 💻 Usage
-
-### Running the Application
-
-Start the Streamlit web interface:
-
-```bash
-streamlit run app.py --server.port 5000
-```
-
-The application will open in your default browser at `http://localhost:5000`
-
-### Step-by-Step Workflow
-
-#### Step 1: Load Log File
-
-- Click **"Load Sample Log"** in the sidebar to use the provided sample, or
-- Upload your own Apache/Nginx log file using the file uploader
-
-#### Step 2: Analyze Logs
-
-- Enable "Pattern Learning" in sidebar (requires database) if you want to track unknown attacks
-- Review the log preview
-- Click **"🔍 Analyze Log File"** button
-- Wait for parsing and attack detection to complete
-
-#### Step 3: Review Detected Attacks
-
-- Navigate to the **"📊 Attack Dashboard"** tab
-- Filter attacks by type
-- Expand each attack to view detailed information:
-  - Attack type and matched pattern
-  - Source IP and timestamp
-  - HTTP method and status code
-  - Full URL and payload
-  - User-Agent string
-
-#### Step 4: Generate Replay Scripts
-
-- Go to the **"💾 Generate Scripts"** tab
-- Click **"🚀 Generate All Replay Scripts"**
-- Download the ZIP file containing:
-  - Python scripts (executable with `requests` library)
-  - cURL commands (for manual testing)
-  - JSON summary report
-
-#### Step 5: Analyze Statistics
-
-- Visit the **"📈 Statistics"** tab for:
-  - Attack type distribution charts
-  - Top attacking IP addresses
-  - Exportable JSON reports
-
-#### Advanced Workflows (Database Required)
-
-**Batch Processing:**
-- Navigate to **"🔁 Batch Processing"** tab
-- Upload multiple log files
-- Process all files simultaneously
-- View aggregate statistics across all files
-
-**Timeline Analysis:**
-- Visit **"📉 Timeline View"** tab
-- See attack trends over the last 30 days
-- View historical analysis records
-
-**Pattern Learning:**
-- Check **"🧠 Unknown Attacks"** tab
-- Review suspicious requests that don't match known patterns
-- Create custom patterns from unknown attacks
-
-**Custom Patterns:**
-- Go to **"⚙️ Custom Patterns"** tab
-- Add your own regex-based attack detection rules
-- Manage (activate/deactivate/delete) existing patterns
-
-**Automated Replay:**
-- Navigate to **"🚀 Automated Replay"** tab
-- Select generated scripts to execute
-- Configure timeout and concurrent execution
-- Download execution reports
-
-### Using Generated Scripts
-
-#### Python Replay Script
-
-```bash
-# Make executable
-chmod +x generated_attacks/attack_1_SQL_Injection.py
-
-# Run the script
-python3 generated_attacks/attack_1_SQL_Injection.py
-```
-
-#### cURL Replay Script
-
-```bash
-# Make executable
-chmod +x generated_attacks/attack_1_SQL_Injection.sh
-
-# Run the script
-bash generated_attacks/attack_1_SQL_Injection.sh
-```
-
-## 🎯 Supported Attack Types
-
-### 1. SQL Injection
-
-**Patterns Detected:**
-- `UNION SELECT` statements
-- `OR 1=1` / `AND 1=1` conditions
-- SQL comments (`--`, `#`, `/* */`)
-- Database manipulation (`DROP TABLE`, `INSERT INTO`, `DELETE FROM`)
-- Database functions (`@@version`, `user()`, `database()`)
-
-**Example:**
-```
-/products.php?id=5 UNION SELECT username,password FROM users--
-```
-
-### 2. Cross-Site Scripting (XSS)
-
-**Patterns Detected:**
-- `<script>` tags and variants
-- JavaScript event handlers (`onerror`, `onload`, `onclick`)
-- `<iframe>` injections
-- JavaScript functions (`alert()`, `eval()`, `document.cookie`)
-
-**Example:**
-```
-/search.php?q=<script>alert('XSS')</script>
-```
-
-### 3. Directory Traversal
-
-**Patterns Detected:**
-- Path traversal sequences (`../`, `..\\`)
-- URL-encoded variants (`%2e%2e/`)
-- Attempts to access `/etc/passwd`, `/etc/shadow`
-- Windows path attempts (`c:\windows\`)
-
-**Example:**
-```
-/download.php?file=../../../../etc/passwd
-```
-
-### 4. Command Injection
-
-**Patterns Detected:**
-- Shell commands (`ls`, `cat`, `wget`, `curl`)
-- Command chaining (`;`, `&&`, `||`, `|`)
-- Command substitution (`` ` ` ``, `$()`)
-- Shell references (`/bin/bash`, `cmd.exe`)
-
-**Example:**
-```
-/api/exec?cmd=ls;cat /etc/shadow
-```
-
-### 5. File Inclusion (LFI/RFI)
-
-**Patterns Detected:**
-- PHP wrappers (`php://filter`, `php://input`)
-- File protocol handlers (`file://`, `expect://`)
-- Data URIs (`data://text/plain`)
-- Remote file inclusion attempts
-
-**Example:**
-```
-/view.php?page=php://filter/convert.base64-encode/resource=config
-```
-
-## 📤 Output Examples
-
-### Python Replay Script
-
-```python
-#!/usr/bin/env python3
-import requests
-from datetime import datetime
-
-attack_info = {
-    "attack_type": "SQL Injection",
-    "original_ip": "198.51.100.78",
-    "timestamp": "19/Nov/2025:10:17:12 +0000",
-    "method": "GET",
-    "status_code": "500"
-}
-
-print(f"[*] Replaying SQL Injection attack")
-print(f"[*] Original IP: {attack_info['original_ip']}")
-# ... (continues with request execution)
-```
-
-### cURL Command
-
-```bash
-#!/bin/bash
-
-# Attack Type: SQL Injection
-# Original IP: 198.51.100.78
-# Timestamp: 19/Nov/2025:10:17:12 +0000
-
-curl -X GET \
-  -H "User-Agent: sqlmap/1.0" \
-  -i \
-  "/products.php?id=5 UNION SELECT username,password FROM users--"
-```
-
-### JSON Summary Report
-
-```json
-{
-  "total_attacks_detected": 24,
-  "unique_ips": 15,
-  "attack_breakdown": {
-    "SQL Injection": 8,
-    "XSS": 7,
-    "Directory Traversal": 4,
-    "Command Injection": 3,
-    "File Inclusion": 2
-  },
-  "attacks": [...]
-}
-```
-
-## 🎓 Educational Purpose
-
-This tool is designed for:
-
-- **Security Research**: Understand attack patterns and techniques
-- **Penetration Testing**: Generate test cases for authorized security assessments
-- **Educational Projects**: Learn about web application vulnerabilities
-- **Log Analysis Training**: Practice analyzing real-world attack logs
-
-### ⚠️ Important Legal Notice
-
-This tool is **ONLY** for:
-- Authorized security testing
-- Educational and research purposes
-- Systems you own or have explicit permission to test
-
-**Unauthorized use against systems you do not own is illegal and unethical.**
-
-## 🛠️ Technical Details
-
-### Technologies Used
-
-- **Python 3.11+**: Core programming language
-- **Streamlit**: Interactive web UI framework
-- **Pandas**: Data processing and analysis
-- **Requests**: HTTP library for replay scripts
-- **Regular Expressions**: Pattern matching for attack detection
-- **urllib.parse**: URL parsing and query string handling
-
-### Module Architecture
-
-#### LogParser Class (`parser/log_parser.py`)
-
-- Parses Apache and Nginx log formats
-- Extracts structured data (IP, timestamp, method, URL, etc.)
-- Handles URL decoding and query parameter parsing
-
-#### AttackDetector Class (`detector/attack_detector.py`)
-
-- Maintains regex patterns for each attack type
-- Performs pattern matching on log entries
-- Generates analysis reports with statistics
-
-#### ReplayGenerator Class (`generator/replay_generator.py`)
-
-- Creates executable Python scripts
-- Generates cURL commands
-- Produces JSON summary reports
-- Manages output directory structure
-
-## 📝 Sample Log Format
-
-The tool supports standard Apache/Nginx combined log format:
-
-```
-IP - - [Timestamp] "Method URL HTTP/Version" Status Size "Referrer" "User-Agent"
-```
-
-Example:
-```
-192.168.1.100 - - [19/Nov/2025:10:15:23 +0000] "GET /index.php HTTP/1.1" 200 1234 "-" "Mozilla/5.0"
-```
-
-## 🔧 Customization
-
-### Adding New Attack Patterns
-
-Edit `detector/attack_detector.py` and add patterns to the `attack_patterns` dictionary:
-
-```python
-self.attack_patterns = {
-    'Your Attack Type': [
-        r"(your_regex_pattern_here)",
-        r"(another_pattern)",
-    ],
-    # ... existing patterns
-}
-```
-
-### Modifying Script Templates
-
-Edit the `generate_python_script()` and `generate_curl_command()` methods in `generator/replay_generator.py`
-
-## 📊 Features Summary
-
-| Feature | Status |
-|---------|--------|
-| Apache Log Parsing | ✅ |
-| Nginx Log Parsing | ✅ |
-| SQL Injection Detection | ✅ |
-| XSS Detection | ✅ |
-| Directory Traversal Detection | ✅ |
-| Command Injection Detection | ✅ |
-| File Inclusion Detection | ✅ |
-| Python Script Generation | ✅ |
-| cURL Command Generation | ✅ |
-| JSON Report Export | ✅ |
-| Interactive Web UI | ✅ |
-| ZIP Download | ✅ |
-| Attack Statistics | ✅ |
 
 ## 🤝 Contributing
 
-This is an educational project. Feel free to:
-- Add new attack patterns
-- Improve detection accuracy
-- Enhance the UI/UX
-- Add support for other log formats
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test with HTTP testing tools
+5. Submit a pull request
 
 ## 📄 License
 
-MIT License - Free for educational and research purposes
+This project is for educational and authorized security testing purposes only.
 
-## 👨‍💻 Author
+## ⚠️ Disclaimer
 
-Created as a final year project for ethical hacking education.
+**Important**: This tool is designed for authorized security testing only. Only use on systems you own or have explicit written permission to test. Unauthorized use is illegal and unethical.
+
+### Responsible Use
+- ✅ Test your own applications
+- ✅ Use in authorized penetration testing
+- ✅ Educational and research purposes
+- ❌ Never test systems without permission
+- ❌ Don't use for malicious purposes
 
 ## 📞 Support
 
 For questions or issues:
-- Review the code comments in each module
-- Check the sample.log for example attack patterns
-- Examine generated scripts for output format
+1. Check the documentation files
+2. Review the HTTP testing guide
+3. Test with sample data first
+4. Ensure proper configuration
 
 ---
 
-**Remember: Use this tool responsibly and only on systems you are authorized to test!**
+**AttackReplay Pro** - Advanced Web Application Security Testing Platform

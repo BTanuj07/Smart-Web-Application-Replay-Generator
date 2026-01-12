@@ -1,0 +1,527 @@
+{% extends "base.html" %}
+
+{% block title %}Custom Patterns - Smart Web Attack Replay Generator{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="mb-0"><i class="fas fa-cog"></i> Custom Attack Pattern Management</h3>
+            </div>
+            <div class="card-body">
+                <p class="lead">Define and manage your own attack detection patterns</p>
+                
+                {% if not db_available %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    Custom pattern management requires database. Database is currently unavailable.
+                    <br><br>
+                    Custom patterns allow you to define your own regex-based attack detection rules that work alongside the built-in patterns.
+                </div>
+                {% else %}
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-plus"></i> Add New Pattern</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Pattern Library Dropdown -->
+                                <div class="mb-3">
+                                    <label class="form-label">Quick Add from Library</label>
+                                    <select class="form-select" id="patternLibrary">
+                                        <option value="">Select a pre-built pattern...</option>
+                                        <optgroup label="SQL Injection">
+                                            <option value="time-sql">Time-Based SQL Injection</option>
+                                            <option value="boolean-sql">Boolean SQL Injection</option>
+                                            <option value="union-sql">Advanced UNION SQL Injection</option>
+                                        </optgroup>
+                                        <optgroup label="Cross-Site Scripting">
+                                            <option value="encoded-xss">Encoded XSS</option>
+                                            <option value="event-xss">Event Handler XSS</option>
+                                            <option value="dom-xss">DOM-Based XSS</option>
+                                        </optgroup>
+                                        <optgroup label="Command Injection">
+                                            <option value="system-cmd">System Command Injection</option>
+                                            <option value="powershell-cmd">PowerShell Injection</option>
+                                            <option value="bash-cmd">Bash Command Injection</option>
+                                        </optgroup>
+                                        <optgroup label="File Inclusion">
+                                            <option value="lfi">Local File Inclusion</option>
+                                            <option value="rfi">Remote File Inclusion</option>
+                                            <option value="php-wrapper">PHP Wrapper Exploitation</option>
+                                        </optgroup>
+                                        <optgroup label="Template Injection">
+                                            <option value="jinja2-ssti">Jinja2 SSTI</option>
+                                            <option value="twig-ssti">Twig SSTI</option>
+                                        </optgroup>
+                                        <optgroup label="NoSQL Injection">
+                                            <option value="mongodb">MongoDB Injection</option>
+                                            <option value="couchdb">CouchDB Injection</option>
+                                        </optgroup>
+                                        <optgroup label="Other Attacks">
+                                            <option value="ldap">LDAP Injection</option>
+                                            <option value="xxe">XXE Injection</option>
+                                            <option value="jwt">JWT Manipulation</option>
+                                            <option value="php-webshell">PHP Web Shell</option>
+                                            <option value="waf-bypass">WAF Bypass</option>
+                                            <option value="dir-enum">Directory Enumeration</option>
+                                        </optgroup>
+                                    </select>
+                                    <div class="form-text">Select a pattern to auto-fill the form below</div>
+                                </div>
+                                
+                                <hr>
+                                
+                                <form id="newPatternForm">
+                                    <div class="mb-3">
+                                        <label for="attackType" class="form-label">Attack Type</label>
+                                        <input type="text" class="form-control" id="attackType" placeholder="e.g., Custom Injection" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="patternRegex" class="form-label">Regex Pattern</label>
+                                        <textarea class="form-control" id="patternRegex" rows="3" 
+                                                placeholder="e.g., (malicious_pattern)" required></textarea>
+                                        <div class="form-text">Enter a valid Python regex pattern</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="description" class="form-label">Description (Optional)</label>
+                                        <textarea class="form-control" id="description" rows="2"></textarea>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="testPatternBtn">
+                                            <i class="fas fa-vial"></i> Test Pattern
+                                        </button>
+                                        <div id="patternTestResult" class="mt-2" style="display: none;"></div>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-success w-100">
+                                        <i class="fas fa-check"></i> Add Pattern
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-list"></i> Existing Custom Patterns</h5>
+                            </div>
+                            <div class="card-body">
+                                {% if patterns %}
+                                <div id="patternsContainer">
+                                    {% for pattern in patterns %}
+                                    <div class="card mb-3 pattern-card" data-pattern-id="{{ pattern.id }}">
+                                        <div class="card-header">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0">
+                                                    {{ pattern.attack_type }}
+                                                    {% if pattern.is_active %}
+                                                        <span class="badge bg-success">Active</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">Inactive</span>
+                                                    {% endif %}
+                                                </h6>
+                                                <div class="btn-group btn-group-sm">
+                                                    {% if pattern.is_active %}
+                                                    <button class="btn btn-outline-warning toggle-pattern-btn" 
+                                                            data-pattern-id="{{ pattern.id }}" 
+                                                            data-action="deactivate">
+                                                        <i class="fas fa-pause"></i> Deactivate
+                                                    </button>
+                                                    {% else %}
+                                                    <button class="btn btn-outline-success toggle-pattern-btn" 
+                                                            data-pattern-id="{{ pattern.id }}" 
+                                                            data-action="activate">
+                                                        <i class="fas fa-play"></i> Activate
+                                                    </button>
+                                                    {% endif %}
+                                                    <button class="btn btn-outline-danger delete-pattern-btn" 
+                                                            data-pattern-id="{{ pattern.id }}">
+                                                        <i class="fas fa-trash"></i> Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <p><strong>ID:</strong> {{ pattern.id }}</p>
+                                                    <p><strong>Created:</strong> {{ pattern.created_at }}</p>
+                                                    {% if pattern.description %}
+                                                    <p><strong>Description:</strong> {{ pattern.description }}</p>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <p><strong>Pattern:</strong></p>
+                                                    <div class="code-preview">{{ pattern.pattern_regex }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i> 
+                                    No custom patterns defined yet. Add your first pattern on the left.
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Pattern Guidelines</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Creating Effective Patterns:</strong></p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-arrow-right text-primary"></i> Use specific regex patterns to avoid false positives</li>
+                    <li><i class="fas fa-arrow-right text-primary"></i> Test patterns with known attack samples</li>
+                    <li><i class="fas fa-arrow-right text-primary"></i> Include word boundaries (\b) when appropriate</li>
+                    <li><i class="fas fa-arrow-right text-primary"></i> Escape special characters properly</li>
+                    <li><i class="fas fa-arrow-right text-primary"></i> Use case-insensitive matching when needed</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-code"></i> Popular Pattern Examples</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Ready-to-use Attack Patterns:</strong></p>
+                <div class="mb-2">
+                    <small class="text-muted">Time-based SQL Injection:</small>
+                    <div class="code-preview small">(?i)(sleep\s*\(\s*\d+\s*\)|benchmark\s*\(|waitfor\s+delay)</div>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Encoded XSS:</small>
+                    <div class="code-preview small">(?i)(fromCharCode|unescape|decodeURI|String\.fromCharCode)</div>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">System Commands:</small>
+                    <div class="code-preview small">(?i)(whoami|id\s|pwd\s|ls\s|cat\s|ping\s)</div>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Local File Inclusion:</small>
+                    <div class="code-preview small">(?i)(\.\.\/|\.\.\\|%2e%2e%2f|\/etc\/passwd)</div>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">MongoDB Injection:</small>
+                    <div class="code-preview small">(?i)(\$ne|\$gt|\$lt|\$regex|\$where)</div>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">PHP Web Shell:</small>
+                    <div class="code-preview small">(?i)(eval\s*\(\s*\$_|assert\s*\(\s*\$_)</div>
+                </div>
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-lightbulb"></i> 
+                    <strong>Tip:</strong> Use the dropdown above to quickly add these patterns!
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% raw %}
+<script>
+// Pattern library data
+const patternLibrary = {
+    'time-sql': {
+        name: 'Time-Based SQL Injection',
+        pattern: '(?i)(sleep\\s*\\(\\s*\\d+\\s*\\)|benchmark\\s*\\(|waitfor\\s+delay|pg_sleep\\s*\\()',
+        description: 'Detects time-based SQL injection attempts using sleep, benchmark, waitfor delay, and pg_sleep functions'
+    },
+    'boolean-sql': {
+        name: 'Boolean SQL Injection',
+        pattern: '(?i)(\\band\\s+\\d+\\s*=\\s*\\d+\\b|\\bor\\s+\\d+\\s*=\\s*\\d+\\b|\\band\\s+true\\b|\\bor\\s+false\\b)',
+        description: 'Detects boolean-based SQL injection with numeric and boolean comparisons'
+    },
+    'union-sql': {
+        name: 'Advanced UNION SQL Injection',
+        pattern: '(?i)(union\\s+all\\s+select|union\\s+select\\s+null|union\\s+select\\s+\\d+)',
+        description: 'Detects advanced UNION-based SQL injection attempts'
+    },
+    'encoded-xss': {
+        name: 'Encoded XSS',
+        pattern: '(?i)(fromCharCode|unescape|decodeURI|decodeURIComponent|String\\.fromCharCode)',
+        description: 'Detects encoded XSS attempts using JavaScript encoding functions'
+    },
+    'event-xss': {
+        name: 'Event Handler XSS',
+        pattern: '(?i)(on\\w+\\s*=\\s*[\\"\']?[^\\"\'>]*(?:alert|prompt|confirm|eval)[^\\"\'>]*[\\"\']?)',
+        description: 'Detects XSS attempts using HTML event handlers'
+    },
+    'dom-xss': {
+        name: 'DOM XSS',
+        pattern: '(?i)(document\\.(write|writeln|cookie)|window\\.(location|open)|innerHTML\\s*=)',
+        description: 'Detects DOM-based XSS attempts targeting document and window objects'
+    },
+    'system-cmd': {
+        name: 'System Command Injection',
+        pattern: '(?i)(whoami|id\\s|pwd\\s|ls\\s|dir\\s|cat\\s|type\\s|echo\\s|ping\\s)',
+        description: 'Detects system command injection attempts with common commands'
+    },
+    'powershell-cmd': {
+        name: 'PowerShell Injection',
+        pattern: '(?i)(powershell|pwsh|invoke-expression|iex|get-process|get-service)',
+        description: 'Detects PowerShell command injection attempts'
+    },
+    'bash-cmd': {
+        name: 'Bash Command Injection',
+        pattern: '(?i)(\\$\\(.*\\)|`.*`|\\|\\s*(curl|wget|nc|netcat)\\s)',
+        description: 'Detects Bash command injection with command substitution and piping'
+    },
+    'lfi': {
+        name: 'Local File Inclusion',
+        pattern: '(?i)(\\.\\.\\/|\\.\\.\\\\\\\|%2e%2e%2f|%2e%2e%5c|\\/etc\\/passwd|\\/proc\\/self\\/environ)',
+        description: 'Detects local file inclusion attempts with directory traversal'
+    },
+    'rfi': {
+        name: 'Remote File Inclusion',
+        pattern: '(?i)(https?:\\/\\/.*\\.(txt|php|asp|jsp)|ftp:\\/\\/.*\\.(txt|php|asp|jsp))',
+        description: 'Detects remote file inclusion attempts with external URLs'
+    },
+    'php-wrapper': {
+        name: 'PHP Wrapper Exploitation',
+        pattern: '(?i)(php:\\/\\/(filter|input|output|fd|memory|temp)|data:\\/\\/|expect:\\/\\/|zip:\\/\\/)',
+        description: 'Detects PHP wrapper exploitation attempts'
+    },
+    'jinja2-ssti': {
+        name: 'Jinja2 SSTI',
+        pattern: '(?i)(\\{\\{.*\\}\\}|\\{%.*%\\}|config\\.__class__|request\\.__class__)',
+        description: 'Detects Jinja2 Server-Side Template Injection attempts'
+    },
+    'twig-ssti': {
+        name: 'Twig SSTI',
+        pattern: '(?i)(\\{\\{.*\\}\\}|_self\\.env|app\\.request|dump\\()',
+        description: 'Detects Twig Server-Side Template Injection attempts'
+    },
+    'mongodb': {
+        name: 'MongoDB Injection',
+        pattern: '(?i)(\\$ne|\\$gt|\\$lt|\\$gte|\\$lte|\\$regex|\\$where|\\$exists|\\$in|\\$nin)',
+        description: 'Detects MongoDB NoSQL injection attempts using operators'
+    },
+    'couchdb': {
+        name: 'CouchDB Injection',
+        pattern: '(?i)(_all_docs|_design\\/|_view\\/|startkey|endkey)',
+        description: 'Detects CouchDB NoSQL injection attempts'
+    },
+    'ldap': {
+        name: 'LDAP Injection',
+        pattern: '(?i)(\\*\\)\\(.*=|\\)\\(.*\\||\\)\\(&\\(.*=|cn=.*\\*.*\\))',
+        description: 'Detects LDAP injection attempts with filter manipulation'
+    },
+    'xxe': {
+        name: 'XXE Injection',
+        pattern: '(?i)(<!ENTITY.*SYSTEM|<!DOCTYPE.*\\[|SYSTEM\\s+[\\"\']file:\\/\\/)',
+        description: 'Detects XML External Entity injection attempts'
+    },
+    'jwt': {
+        name: 'JWT Manipulation',
+        pattern: '(?i)(eyJ[A-Za-z0-9+\\/=]+\\.eyJ[A-Za-z0-9+\\/=]+\\.|\\\"alg\\\":\\s*\\\"none\\\"|\\\"typ\\\":\\s*\\\"JWT\\\")',
+        description: 'Detects JWT token manipulation attempts'
+    },
+    'php-webshell': {
+        name: 'PHP Web Shell',
+        pattern: '(?i)(eval\\s*\\(\\s*\\$_|assert\\s*\\(\\s*\\$_|preg_replace.*\\/e|create_function)',
+        description: 'Detects PHP web shell upload attempts'
+    },
+    'waf-bypass': {
+        name: 'WAF Bypass',
+        pattern: '(?i)(\\/\\*.*\\*\\/|--\\s*-|#.*#|\\+\\+\\+|%00|%0a|%0d|%20|%09)',
+        description: 'Detects common WAF bypass techniques'
+    },
+    'dir-enum': {
+        name: 'Directory Enumeration',
+        pattern: '(?i)(\\/admin\\/|\\/backup\\/|\\/config\\/|\\/test\\/|\\/dev\\/|\\/staging\\/|\\.git\\/|\\.svn\\/)',
+        description: 'Detects directory enumeration attempts'
+    }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Pattern library selection
+    document.getElementById('patternLibrary')?.addEventListener('change', function() {
+        const selectedPattern = this.value;
+        if (selectedPattern && patternLibrary[selectedPattern]) {
+            const pattern = patternLibrary[selectedPattern];
+            document.getElementById('attackType').value = pattern.name;
+            document.getElementById('patternRegex').value = pattern.pattern;
+            document.getElementById('description').value = pattern.description;
+        }
+    });
+    
+    // Test pattern functionality
+    document.getElementById('testPatternBtn')?.addEventListener('click', function() {
+        const pattern = document.getElementById('patternRegex').value;
+        const resultDiv = document.getElementById('patternTestResult');
+        
+        if (!pattern) {
+            resultDiv.innerHTML = '<div class="alert alert-warning">Please enter a pattern to test</div>';
+            resultDiv.style.display = 'block';
+            return;
+        }
+        
+        // Test URLs for different attack types
+        const testUrls = [
+            '/test.php?cmd=sleep(5)',
+            '/search?q=<script>alert(String.fromCharCode(88,83,83))</script>',
+            '/shell.php?cmd=whoami',
+            '/page.php?file=../../../etc/passwd',
+            '/api/users?filter[$ne]=null',
+            '/auth?token=eyJhbGciOiJub25lIn0.eyJ1c2VyIjoiYWRtaW4ifQ.',
+            '/admin/config/database.conf',
+            '/upload.php?file=eval($_GET[cmd])'
+        ];
+        
+        try {
+            const regex = new RegExp(pattern.replace(/\(\?\i\)/g, ''), 'i');
+            let matches = [];
+            
+            testUrls.forEach(url => {
+                if (regex.test(url)) {
+                    const match = url.match(regex);
+                    matches.push({
+                        url: url,
+                        match: match[0]
+                    });
+                }
+            });
+            
+            if (matches.length > 0) {
+                let html = '<div class="alert alert-success"><strong>Pattern Test Results:</strong><ul class="mb-0 mt-2">';
+                matches.forEach(match => {
+                    html += `<li><code>${match.url}</code> → <strong>${match.match}</strong></li>`;
+                });
+                html += '</ul></div>';
+                resultDiv.innerHTML = html;
+            } else {
+                resultDiv.innerHTML = '<div class="alert alert-info">Pattern compiled successfully but no matches found in test URLs</div>';
+            }
+            
+        } catch (e) {
+            resultDiv.innerHTML = `<div class="alert alert-danger">Pattern compilation error: ${e.message}</div>`;
+        }
+        
+        resultDiv.style.display = 'block';
+    });
+    
+    // Add new pattern
+    document.getElementById('newPatternForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData();
+        formData.append('attack_type', document.getElementById('attackType').value);
+        formData.append('pattern_regex', document.getElementById('patternRegex').value);
+        formData.append('description', document.getElementById('description').value);
+        
+        fetch('/add_pattern', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Pattern added successfully!');
+                location.reload();
+            } else {
+                alert('Error adding pattern: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error adding pattern: ' + error);
+        });
+    });
+    
+    // Toggle pattern active/inactive
+    document.querySelectorAll('.toggle-pattern-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const patternId = this.getAttribute('data-pattern-id');
+            const action = this.getAttribute('data-action');
+            const isActive = action === 'activate';
+            
+            const formData = new FormData();
+            formData.append('action', 'toggle');
+            formData.append('is_active', isActive.toString());
+            
+            fetch(`/update_pattern/${patternId}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error updating pattern: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Error updating pattern: ' + error);
+            });
+        });
+    });
+    
+    // Delete pattern
+    document.querySelectorAll('.delete-pattern-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to delete this pattern? This action cannot be undone.')) {
+                const patternId = this.getAttribute('data-pattern-id');
+                
+                const formData = new FormData();
+                formData.append('action', 'delete');
+                
+                fetch(`/update_pattern/${patternId}`, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Remove the pattern card from DOM
+                        const patternCard = document.querySelector(`[data-pattern-id="${patternId}"]`);
+                        if (patternCard) {
+                            patternCard.remove();
+                        }
+                        
+                        // Check if no patterns left
+                        const remainingPatterns = document.querySelectorAll('.pattern-card');
+                        if (remainingPatterns.length === 0) {
+                            location.reload();
+                        }
+                    } else {
+                        alert('Error deleting pattern: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Error deleting pattern: ' + error);
+                });
+            }
+        });
+    });
+});
+</script>
+{% endraw %}
+{% endblock %}

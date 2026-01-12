@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - AttackReplay Pro{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+{% block page_description %}Advanced web attack analysis and replay generation{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('upload_analyze') }}" class="btn btn-primary">
+    <i class="fas fa-plus"></i> New Analysis
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+            <div class="card-body text-center py-5">
+                <div class="feature-icon mx-auto mb-4" style="background: rgba(255,255,255,0.2);">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h1 class="display-5 fw-bold mb-3">AttackReplay Pro</h1>
+                <p class="lead mb-4">Transform web server logs into actionable security insights with AI-powered attack detection and automated replay generation</p>
+                <div class="d-flex gap-3 justify-content-center flex-wrap">
+                    <a href="{{ url_for('upload_analyze') }}" class="btn btn-light btn-lg">
+                        <i class="fas fa-rocket"></i> Start Analysis
+                    </a>
+                    <button class="btn btn-outline-light btn-lg" onclick="scrollToFeatures()">
+                        <i class="fas fa-info-circle"></i> Learn More
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-5" id="features">
+    <div class="col-md-4 mb-4">
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-upload"></i>
+            </div>
+            <h4 class="mb-3">Upload & Analyze</h4>
+            <p class="text-muted mb-4">Upload Apache/Nginx logs and instantly detect attack patterns with our advanced regex engine</p>
+            <a href="{{ url_for('upload_analyze') }}" class="btn btn-primary">
+                <i class="fas fa-arrow-right"></i> Get Started
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-code"></i>
+            </div>
+            <h4 class="mb-3">Generate Scripts</h4>
+            <p class="text-muted mb-4">Automatically create Python and cURL replay scripts for penetration testing and validation</p>
+            <a href="{{ url_for('generate_scripts') }}" class="btn btn-success">
+                <i class="fas fa-arrow-right"></i> Generate
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h4 class="mb-3">Analytics & Reports</h4>
+            <p class="text-muted mb-4">Visualize attack trends, generate comprehensive reports, and track security metrics</p>
+            <a href="{{ url_for('statistics') }}" class="btn btn-info">
+                <i class="fas fa-arrow-right"></i> View Stats
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Attack Types -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-bug"></i> Supported Attack Types
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="d-flex align-items-center p-3 border rounded">
+                            <div class="feature-icon me-3" style="width: 3rem; height: 3rem; font-size: 1rem;">
+                                <i class="fas fa-database"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1">SQL Injection</h6>
+                                <small class="text-muted">UNION SELECT, OR 1=1, etc.</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="d-flex align-items-center p-3 border rounded">
+                            <div class="feature-icon me-3" style="width: 3rem; height: 3rem; font-size: 1rem;">
+                                <i class="fas fa-code"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1">Cross-Site Scripting</h6>
+                                <small class="text-muted">&lt;script&gt;, onerror=, javascript:</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="d-flex align-items-center p-3 border rounded">
+                            <div class="feature-icon me-3" style="width: 3rem; height: 3rem; font-size: 1rem;">
+                                <i class="fas fa-folder-open"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1">Directory Traversal</h6>
+                                <small class="text-muted">../, %2e%2e/, path manipulation</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="d-flex align-items-center p-3 border rounded">
+                            <div class="feature-icon me-3" style="width: 3rem; height: 3rem; font-size: 1rem;">
+                                <i class="fas fa-terminal"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1">Command Injection</h6>
+                                <small class="text-muted">; ls, | cat, $(), system commands</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="d-flex align-items-center p-3 border rounded">
+                            <div class="feature-icon me-3" style="width: 3rem; height: 3rem; font-size: 1rem;">
+                                <i class="fas fa-file-code"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1">File Inclusion</h6>
+                                <small class="text-muted">php://, file=, LFI/RFI attacks</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="d-flex align-items-center p-3 border rounded">
+                            <div class="feature-icon me-3" style="width: 3rem; height: 3rem; font-size: 1rem;">
+                                <i class="fas fa-cog"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1">Custom Patterns</h6>
+                                <small class="text-muted">User-defined regex rules</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Advanced Features -->
+{% if db_available %}
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-star"></i> Advanced Features
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success d-flex align-items-center mb-4">
+                    <i class="fas fa-database me-2"></i>
+                    <strong>Database Connected:</strong> All advanced features are available!
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-brain text-primary me-3 mt-1"></i>
+                            <div>
+                                <h6>Pattern Learning</h6>
+                                <p class="text-muted small mb-0">AI-powered detection of unknown attack patterns</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-chart-line text-success me-3 mt-1"></i>
+                            <div>
+                                <h6>Timeline Analytics</h6>
+                                <p class="text-muted small mb-0">Historical attack trend visualization</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-layer-group text-info me-3 mt-1"></i>
+                            <div>
+                                <h6>Batch Processing</h6>
+                                <p class="text-muted small mb-0">Process multiple log files simultaneously</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <a href="{{ url_for('timeline') }}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-chart-line"></i> View Timeline
+                    </a>
+                    <a href="{{ url_for('custom_patterns') }}" class="btn btn-outline-success">
+                        <i class="fas fa-cog"></i> Manage Patterns
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="alert alert-warning">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle me-3"></i>
+                <div>
+                    <h6 class="mb-1">Database Offline</h6>
+                    <p class="mb-0">Advanced features like pattern learning and timeline analytics require database connection. Core analysis features are still available.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Quick Start Guide -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-rocket"></i> Quick Start Guide
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 text-center mb-4">
+                        <div class="position-relative">
+                            <div class="feature-icon mx-auto mb-3">
+                                <i class="fas fa-upload"></i>
+                            </div>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary">1</span>
+                        </div>
+                        <h6>Upload Logs</h6>
+                        <p class="text-muted small">Upload Apache/Nginx access logs or try our sample data</p>
+                    </div>
+                    
+                    <div class="col-md-3 text-center mb-4">
+                        <div class="position-relative">
+                            <div class="feature-icon mx-auto mb-3">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary">2</span>
+                        </div>
+                        <h6>Analyze Attacks</h6>
+                        <p class="text-muted small">AI detects attack patterns using advanced regex rules</p>
+                    </div>
+                    
+                    <div class="col-md-3 text-center mb-4">
+                        <div class="position-relative">
+                            <div class="feature-icon mx-auto mb-3">
+                                <i class="fas fa-code"></i>
+                            </div>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary">3</span>
+                        </div>
+                        <h6>Generate Scripts</h6>
+                        <p class="text-muted small">Create Python and cURL replay scripts automatically</p>
+                    </div>
+                    
+                    <div class="col-md-3 text-center mb-4">
+                        <div class="position-relative">
+                            <div class="feature-icon mx-auto mb-3">
+                                <i class="fas fa-download"></i>
+                            </div>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary">4</span>
+                        </div>
+                        <h6>Test & Validate</h6>
+                        <p class="text-muted small">Execute scripts against your test environment</p>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <a href="{{ url_for('upload_analyze') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-play"></i> Start Your First Analysis
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function scrollToFeatures() {
+    document.getElementById('features').scrollIntoView({ 
+        behavior: 'smooth' 
+    });
+}
+</script>
+{% endblock %}

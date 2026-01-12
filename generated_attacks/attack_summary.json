@@ -1,0 +1,47 @@
+{
+  "analysis_timestamp": "1767991130.524298",
+  "total_attacks_detected": 2,
+  "unique_ips": 1,
+  "attack_breakdown": {
+    "Directory Traversal": 1,
+    "Local File Inclusion": 1
+  },
+  "generated_files": {
+    "python_scripts": [
+      "generated_attacks/attack_01_Directory_Traversal.py",
+      "generated_attacks/attack_02_Local_File_Inclusion.py"
+    ],
+    "curl_commands": [
+      "generated_attacks/attack_01_Directory_Traversal.sh",
+      "generated_attacks/attack_02_Local_File_Inclusion.sh"
+    ],
+    "batch_script": "generated_attacks/batch_attack_all.py",
+    "readme": "generated_attacks/README.md"
+  },
+  "attacks": [
+    {
+      "attack_type": "Directory Traversal",
+      "full_url": "/view?file=%2e%2e%2f%2e%2e%2fetc/passwd",
+      "ip": "45.33.2.8",
+      "line_number": 1,
+      "matched_pattern": "(%2e%2e/|%2e%2e\\\\|%2e%2e%2f)",
+      "matched_payload": "%2e%2e%2f",
+      "method": "GET",
+      "status": "404",
+      "timestamp": "10/Jan/2026:14:22:10 +0000",
+      "user_agent": "Mozilla/5.0"
+    },
+    {
+      "attack_type": "Local File Inclusion",
+      "full_url": "/view?file=%2e%2e%2f%2e%2e%2fetc/passwd",
+      "ip": "45.33.2.8",
+      "line_number": 1,
+      "matched_pattern": "(?i)(\\.\\.\\/|\\.\\.\\\\|%2e%2e%2f|%2e%2e%5c|\\/etc\\/passwd|\\/proc\\/self\\/environ)",
+      "matched_payload": "%2e%2e%2f",
+      "method": "GET",
+      "status": "404",
+      "timestamp": "10/Jan/2026:14:22:10 +0000",
+      "user_agent": "Mozilla/5.0"
+    }
+  ]
+}

@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Attack Dashboard - AttackReplay Pro{% endblock %}
+
+{% block page_title %}Attack Dashboard{% endblock %}
+{% block page_description %}Detailed analysis of detected attacks{% endblock %}
+
+{% block header_actions %}
+{% if analysis and analysis.total_attacks > 0 %}
+<div class="btn-group">
+    <a href="{{ url_for('generate_scripts') }}" class="btn btn-success">
+        <i class="fas fa-code"></i> Generate Scripts
+    </a>
+    <a href="{{ url_for('statistics') }}" class="btn btn-outline-primary">
+        <i class="fas fa-chart-pie"></i> View Statistics
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if analysis %}
+<!-- Statistics Overview -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="stats-card">
+            <div class="stats-number text-danger">{{ analysis.total_attacks }}</div>
+            <div class="stats-label">Attacks Detected</div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="stats-card">
+            <div class="stats-number text-warning">{{ analysis.unique_ips }}</div>
+            <div class="stats-label">Unique IPs</div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="stats-card">
+            <div class="stats-number text-info">{{ session.total_lines or 0 }}</div>
+            <div class="stats-label">Log Lines</div>
+        </div>
+    </div>
+</div>
+{% if analysis.total_attacks > 0 %}
+<!-- Attack Type Filter -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="mb-3">
+                    <i class="fas fa-filter"></i> Filter by Attack Type
+                </h6>
+                <div class="btn-group flex-wrap" role="group" id="attackTypeFilter">
+                    <input type="checkbox" class="btn-check" id="filter-all" checked>
+                    <label class="btn btn-outline-primary" for="filter-all">
+                        <i class="fas fa-list"></i> All Types
+                    </label>
+                    
+                    {% for attack_type in analysis.attack_type_counts.keys() %}
+                    <input type="checkbox" class="btn-check" id="filter-{{ loop.index }}" checked>
+                    <label class="btn btn-outline-secondary" for="filter-{{ loop.index }}">
+                        {{ attack_type }} ({{ analysis.attack_type_counts[attack_type] }})
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Detected Attacks -->
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">
+                <i class="fas fa-bug"></i> Detected Attacks 
+                <span class="badge bg-danger ms-2">{{ analysis.attacks|length }}</span>
+            </h5>
+            <small class="text-muted">Showing all detected attack patterns</small>
+        </div>
+        
+        {% for attack in analysis.attacks %}
+        <div class="card attack-card mb-3" data-attack-type="{{ attack.attack_type }}">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div class="feature-icon me-3" style="width: 2.5rem; height: 2.5rem; font-size: 0.875rem;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">Attack #{{ loop.index }}: {{ attack.attack_type }}</h6>
+                            <small class="text-muted">IP: {{ attack.ip }} • Line {{ attack.line_number }} • {{ attack.timestamp }}</small>
+                        </div>
+                    </div>
+                    <span class="badge bg-danger">{{ attack.attack_type }}</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-6 mb-3">
+                        <h6 class="text-primary">
+                            <i class="fas fa-info-circle"></i> Attack Details
+                        </h6>
+                        <div class="row">
+                            <div class="col-sm-6 mb-2">
+                                <strong>Type:</strong><br>
+                                <span class="badge bg-danger">{{ attack.attack_type }}</span>
+                            </div>
+                            <div class="col-sm-6 mb-2">
+                                <strong>IP Address:</strong><br>
+                                <code class="bg-light p-1 rounded">{{ attack.ip }}</code>
+                            </div>
+                            <div class="col-sm-6 mb-2">
+                                <strong>Method:</strong><br>
+                                <span class="badge bg-info">{{ attack.method }}</span>
+                            </div>
+                            <div class="col-sm-6 mb-2">
+                                <strong>Status:</strong><br>
+                                <span class="badge bg-{{ 'success' if attack.status.startswith('2') else 'warning' if attack.status.startswith('3') else 'danger' }}">
+                                    {{ attack.status }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-6 mb-3">
+                        <h6 class="text-success">
+                            <i class="fas fa-search"></i> Pattern Analysis
+                        </h6>
+                        <p class="mb-2"><strong>Matched Pattern:</strong></p>
+                        <div class="code-preview mb-3">{{ attack.matched_pattern }}</div>
+                        <p class="mb-2"><strong>Extracted Payload:</strong></p>
+                        <div class="code-preview">{{ attack.matched_payload }}</div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <h6 class="text-warning">
+                        <i class="fas fa-link"></i> Full Request URL
+                    </h6>
+                    <div class="code-preview">{{ attack.full_url }}</div>
+                </div>
+                
+                <div>
+                    <h6 class="text-info">
+                        <i class="fas fa-user-agent"></i> User Agent
+                    </h6>
+                    <div class="code-preview">{{ attack.user_agent }}</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% else %}
+<div class="alert alert-success">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-shield-check me-3 text-success" style="font-size: 2rem;"></i>
+        <div>
+            <h6 class="mb-1">No Attacks Detected</h6>
+            <p class="mb-0">The analyzed log file appears to be clean with no recognizable attack patterns.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<!-- No Analysis Data -->
+<div class="row">
+    <div class="col-12">
+        <div class="card text-center">
+            <div class="card-body py-5">
+                <div class="feature-icon mx-auto mb-4" style="background: var(--secondary-color); color: var(--text-secondary);">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <h4 class="mb-3">No Analysis Data Available</h4>
+                <p class="text-muted mb-4">Upload and analyze a log file first to see the attack dashboard.</p>
+                <a href="{{ url_for('upload_analyze') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-upload"></i> Upload & Analyze Log File
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Attack type filtering
+    const filterButtons = document.querySelectorAll('#attackTypeFilter input[type="checkbox"]');
+    const attackCards = document.querySelectorAll('.attack-card');
+    
+    filterButtons.forEach(button => {
+        button.addEventListener('change', function() {
+            if (this.id === 'filter-all') {
+                // Handle "All Types" button
+                if (this.checked) {
+                    // Check all other buttons
+                    filterButtons.forEach(btn => {
+                        if (btn.id !== 'filter-all') {
+                            btn.checked = true;
+                        }
+                    });
+                    // Show all cards
+                    attackCards.forEach(card => {
+                        card.style.display = 'block';
+                    });
+                } else {
+                    // Uncheck all other buttons
+                    filterButtons.forEach(btn => {
+                        if (btn.id !== 'filter-all') {
+                            btn.checked = false;
+                        }
+                    });
+                    // Hide all cards
+                    attackCards.forEach(card => {
+                        card.style.display = 'none';
+                    });
+                }
+            } else {
+                // Handle individual attack type buttons
+                const allButton = document.getElementById('filter-all');
+                const checkedButtons = Array.from(filterButtons).filter(btn => 
+                    btn.id !== 'filter-all' && btn.checked
+                );
+                
+                // Update "All Types" button state
+                allButton.checked = checkedButtons.length === filterButtons.length - 1;
+                
+                // Show/hide cards based on selected filters
+                const selectedTypes = checkedButtons.map(btn => {
+                    // Get the attack type name from the label, removing the count in parentheses
+                    const labelText = btn.nextElementSibling.textContent.trim();
+                    // Remove count pattern like " (2)" from the end
+                    return labelText.replace(/\s*\(\d+\)$/, '');
+                });
+                
+                attackCards.forEach(card => {
+                    const attackType = card.getAttribute('data-attack-type');
+                    if (selectedTypes.length === 0 || selectedTypes.includes(attackType)) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

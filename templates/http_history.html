@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP History - Smart Web Attack Replay Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <style>
+        .proxy-status {
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .proxy-running {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .proxy-stopped {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .traffic-table {
+            font-size: 0.9em;
+        }
+        .traffic-table th {
+            background: #f8f9fa;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .traffic-table tbody tr {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .traffic-table tbody tr:hover {
+            background-color: #f5f5f5;
+        }
+        .traffic-table tbody tr.selected {
+            background-color: #e3f2fd;
+        }
+        .method-get { color: #28a745; font-weight: bold; }
+        .method-post { color: #007bff; font-weight: bold; }
+        .method-put { color: #ffc107; font-weight: bold; }
+        .method-delete { color: #dc3545; font-weight: bold; }
+        .status-2xx { color: #28a745; }
+        .status-3xx { color: #ffc107; }
+        .status-4xx { color: #fd7e14; }
+        .status-5xx { color: #dc3545; }
+        .table-container {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+        }
+        .details-panel {
+            height: 500px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+        .json-viewer {
+            background: #2d3748;
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .filter-panel {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .live-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #28a745;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            margin-right: 5px;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-shield-alt"></i> Smart Web Attack Replay Generator
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">Dashboard</a>
+                <a class="nav-link" href="/upload">Upload & Analyze</a>
+                <a class="nav-link active" href="/http_history">HTTP History</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Proxy Status -->
+        <div id="proxyStatus" class="proxy-status proxy-stopped">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-circle" id="statusIcon"></i>
+                    <strong>Proxy Status:</strong> <span id="statusText">Stopped</span>
+                    <span id="proxyUrl" class="ms-3"></span>
+                </div>
+                <div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="enableHttps">
+                        <label class="form-check-label" for="enableHttps">
+                            <strong>Enable HTTPS Interception</strong>
+                            <small class="text-muted d-block">Requires CA certificate installation</small>
+                        </label>
+                    </div>
+                    <button id="startProxyBtn" class="btn btn-success btn-sm">
+                        <i class="fas fa-play"></i> Start Proxy
+                    </button>
+                    <button id="stopProxyBtn" class="btn btn-danger btn-sm" disabled>
+                        <i class="fas fa-stop"></i> Stop Proxy
+                    </button>
+                    <button id="downloadCertBtn" class="btn btn-info btn-sm" disabled>
+                        <i class="fas fa-certificate"></i> Download CA Certificate
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <h6><i class="fas fa-globe"></i> Total Requests</h6>
+                    <div class="h4 mb-0" id="totalRequests">0</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <h6><i class="fas fa-server"></i> Unique Hosts</h6>
+                    <div class="h4 mb-0" id="uniqueHosts">0</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <h6><i class="fas fa-clock"></i> Avg Response Time</h6>
+                    <div class="h4 mb-0" id="avgResponseTime">0ms</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <h6><span class="live-indicator"></span>Live Stream</h6>
+                    <div class="h4 mb-0" id="streamStatus">Connected</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-panel">
+            <div class="row">
+                <div class="col-md-2">
+                    <label class="form-label">Method:</label>
+                    <select id="methodFilter" class="form-select form-select-sm">
+                        <option value="">All Methods</option>
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status:</label>
+                    <select id="statusFilter" class="form-select form-select-sm">
+                        <option value="">All Status</option>
+                        <option value="2xx">2xx Success</option>
+                        <option value="3xx">3xx Redirect</option>
+                        <option value="4xx">4xx Client Error</option>
+                        <option value="5xx">5xx Server Error</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Host:</label>
+                    <input type="text" id="hostFilter" class="form-control form-control-sm" placeholder="Filter by host">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">URL Pattern:</label>
+                    <input type="text" id="urlFilter" class="form-control form-control-sm" placeholder="Regex pattern">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button id="applyFilters" class="btn btn-primary btn-sm me-2">Apply</button>
+                    <button id="clearFilters" class="btn btn-outline-secondary btn-sm">Clear</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="row">
+            <!-- Traffic Table -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-list"></i> HTTP History</h5>
+                        <div>
+                            <button id="clearHistory" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-trash"></i> Clear
+                            </button>
+                            <button id="exportJson" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-download"></i> Export JSON
+                            </button>
+                            <button id="exportTxt" class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-file-alt"></i> Export Log
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="table table-sm traffic-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th width="8%">Method</th>
+                                    <th width="40%">URL</th>
+                                    <th width="15%">Host</th>
+                                    <th width="8%">Status</th>
+                                    <th width="10%">Size</th>
+                                    <th width="10%">Time</th>
+                                    <th width="9%">Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trafficTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">
+                                        <i class="fas fa-info-circle"></i> No traffic captured yet. Start the proxy and configure your browser.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Details Panel -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-info-circle"></i> Request/Response Details</h5>
+                    </div>
+                    <div class="details-panel" id="detailsPanel">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-mouse-pointer fa-2x mb-3"></i>
+                            <p>Click on a request to view details</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Setup Instructions Modal -->
+        <div class="modal fade" id="setupModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Proxy Setup Instructions</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <h6>Configure your browser to use the HTTP proxy:</h6>
+                        <div class="alert alert-info">
+                            <strong>Proxy Address:</strong> 127.0.0.1:8080
+                        </div>
+                        
+                        <h6>Browser Configuration:</h6>
+                        <ul>
+                            <li><strong>Chrome/Edge:</strong> Settings → Advanced → System → Open proxy settings</li>
+                            <li><strong>Firefox:</strong> Settings → Network Settings → Manual proxy configuration</li>
+                            <li><strong>Safari:</strong> System Preferences → Network → Advanced → Proxies</li>
+                        </ul>
+                        
+                        <div class="alert alert-warning">
+                            <strong>Note:</strong> This proxy only captures HTTP traffic. HTTPS traffic will be tunneled but not captured.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize Socket.IO
+        const socket = io();
+        let selectedTransactionId = null;
+        let trafficData = [];
+
+        // DOM elements
+        const proxyStatus = document.getElementById('proxyStatus');
+        const statusIcon = document.getElementById('statusIcon');
+        const statusText = document.getElementById('statusText');
+        const proxyUrl = document.getElementById('proxyUrl');
+        const startProxyBtn = document.getElementById('startProxyBtn');
+        const stopProxyBtn = document.getElementById('stopProxyBtn');
+        const downloadCertBtn = document.getElementById('downloadCertBtn');
+        const enableHttpsCheckbox = document.getElementById('enableHttps');
+        const trafficTableBody = document.getElementById('trafficTableBody');
+        const detailsPanel = document.getElementById('detailsPanel');
+        const totalRequests = document.getElementById('totalRequests');
+        const uniqueHosts = document.getElementById('uniqueHosts');
+        const avgResponseTime = document.getElementById('avgResponseTime');
+        const streamStatus = document.getElementById('streamStatus');
+
+        // Socket event handlers
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            streamStatus.textContent = 'Connected';
+            loadTrafficHistory();
+            loadStatistics();
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+            streamStatus.textContent = 'Disconnected';
+        });
+
+        socket.on('traffic_update', (data) => {
+            if (data.type === 'new_transaction') {
+                addTrafficRow(data.data);
+                updateStatistics();
+            } else if (data.type === 'traffic_cleared') {
+                clearTrafficTable();
+                updateStatistics();
+            }
+        });
+
+        socket.on('proxy_status', (data) => {
+            updateProxyStatus(data);
+        });
+
+        // Button event handlers
+        startProxyBtn.addEventListener('click', startProxy);
+        stopProxyBtn.addEventListener('click', stopProxy);
+        downloadCertBtn.addEventListener('click', downloadCACertificate);
+        document.getElementById('clearHistory').addEventListener('click', clearHistory);
+        document.getElementById('exportJson').addEventListener('click', () => exportTraffic('json'));
+        document.getElementById('exportTxt').addEventListener('click', () => exportTraffic('txt'));
+        document.getElementById('applyFilters').addEventListener('click', applyFilters);
+        document.getElementById('clearFilters').addEventListener('click', clearFilters);
+
+        // Functions
+        function startProxy() {
+            const enableHttps = enableHttpsCheckbox.checked;
+            
+            fetch('/api/proxy/start', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enable_https: enableHttps })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateProxyStatus({ 
+                            running: true, 
+                            host: '127.0.0.1', 
+                            port: 8080,
+                            https_enabled: data.https_enabled
+                        });
+                        
+                        if (data.https_enabled) {
+                            showHttpsSetupInstructions();
+                        } else {
+                            showSetupInstructions();
+                        }
+                    } else {
+                        alert('Failed to start proxy: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error starting proxy:', error);
+                    alert('Error starting proxy');
+                });
+        }
+
+        function stopProxy() {
+            fetch('/api/proxy/stop', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateProxyStatus({ running: false });
+                    } else {
+                        alert('Failed to stop proxy: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error stopping proxy:', error);
+                });
+        }
+
+        function updateProxyStatus(status) {
+            if (status.running) {
+                proxyStatus.className = 'proxy-status proxy-running';
+                statusIcon.className = 'fas fa-circle text-success';
+                statusText.textContent = 'Running';
+                
+                if (status.https_enabled) {
+                    proxyUrl.textContent = `Proxy: ${status.host}:${status.port} (HTTPS Enabled)`;
+                    downloadCertBtn.disabled = false;
+                } else {
+                    proxyUrl.textContent = `Proxy: ${status.host}:${status.port} (HTTP Only)`;
+                    downloadCertBtn.disabled = true;
+                }
+                
+                startProxyBtn.disabled = true;
+                stopProxyBtn.disabled = false;
+            } else {
+                proxyStatus.className = 'proxy-status proxy-stopped';
+                statusIcon.className = 'fas fa-circle text-danger';
+                statusText.textContent = 'Stopped';
+                proxyUrl.textContent = '';
+                startProxyBtn.disabled = false;
+                stopProxyBtn.disabled = true;
+                downloadCertBtn.disabled = true;
+            }
+        }
+
+        function downloadCACertificate() {
+            fetch('/api/proxy/ca-certificate')
+                .then(response => {
+                    if (response.ok) {
+                        return response.blob();
+                    } else {
+                        throw new Error('CA certificate not available');
+                    }
+                })
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'proxy_ca_certificate.crt';
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    
+                    // Show installation instructions after download
+                    showHttpsSetupInstructions();
+                })
+                .catch(error => {
+                    console.error('Error downloading CA certificate:', error);
+                    alert('Error downloading CA certificate: ' + error.message);
+                });
+        }
+
+        function showHttpsSetupInstructions() {
+            // Update modal content for HTTPS setup
+            const modalTitle = document.querySelector('#setupModal .modal-title');
+            const modalBody = document.querySelector('#setupModal .modal-body');
+            
+            modalTitle.textContent = 'HTTPS Interception Setup';
+            modalBody.innerHTML = `
+                <div class="alert alert-warning">
+                    <strong>⚠️ Important:</strong> HTTPS interception requires installing a CA certificate in your browser/system.
+                </div>
+                
+                <h6>Step 1: Configure Browser Proxy</h6>
+                <div class="alert alert-info">
+                    <strong>HTTP Proxy:</strong> 127.0.0.1:8080<br>
+                    <strong>HTTPS Proxy:</strong> 127.0.0.1:8080
+                </div>
+                
+                <h6>Step 2: Install CA Certificate</h6>
+                <p>The CA certificate has been downloaded. Install it in your browser:</p>
+                
+                <div class="accordion" id="certInstallAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#chromeInstructions">
+                                Chrome/Edge Instructions
+                            </button>
+                        </h2>
+                        <div id="chromeInstructions" class="accordion-collapse collapse" data-bs-parent="#certInstallAccordion">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li>Open Chrome/Edge Settings</li>
+                                    <li>Go to <strong>Privacy and Security</strong> → <strong>Security</strong></li>
+                                    <li>Click <strong>Manage certificates</strong></li>
+                                    <li>Go to <strong>Trusted Root Certification Authorities</strong> tab</li>
+                                    <li>Click <strong>Import</strong> and select the downloaded certificate</li>
+                                    <li>Restart your browser</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#firefoxInstructions">
+                                Firefox Instructions
+                            </button>
+                        </h2>
+                        <div id="firefoxInstructions" class="accordion-collapse collapse" data-bs-parent="#certInstallAccordion">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li>Open Firefox Settings</li>
+                                    <li>Go to <strong>Privacy & Security</strong></li>
+                                    <li>Scroll to <strong>Certificates</strong> section</li>
+                                    <li>Click <strong>View Certificates</strong></li>
+                                    <li>Go to <strong>Authorities</strong> tab</li>
+                                    <li>Click <strong>Import</strong> and select the downloaded certificate</li>
+                                    <li>Check "Trust this CA to identify websites"</li>
+                                    <li>Restart Firefox</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#safariInstructions">
+                                Safari (macOS) Instructions
+                            </button>
+                        </h2>
+                        <div id="safariInstructions" class="accordion-collapse collapse" data-bs-parent="#certInstallAccordion">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li>Double-click the downloaded certificate</li>
+                                    <li>It will open in Keychain Access</li>
+                                    <li>Double-click the certificate in Keychain</li>
+                                    <li>Expand <strong>Trust</strong> section</li>
+                                    <li>Set "When using this certificate" to <strong>Always Trust</strong></li>
+                                    <li>Enter your password when prompted</li>
+                                    <li>Restart Safari</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-success mt-3">
+                    <strong>✅ After installation:</strong> You can capture and decrypt HTTPS traffic!
+                </div>
+                
+                <div class="alert alert-danger mt-3">
+                    <strong>🔒 Security Note:</strong> Only use this for testing purposes. Remove the certificate when done.
+                </div>
+            `;
+            
+            const modal = new bootstrap.Modal(document.getElementById('setupModal'));
+            modal.show();
+        }
+
+        function showSetupInstructions() {
+            // Update modal content for HTTP-only setup
+            const modalTitle = document.querySelector('#setupModal .modal-title');
+            const modalBody = document.querySelector('#setupModal .modal-body');
+            
+            modalTitle.textContent = 'HTTP Proxy Setup Instructions';
+            modalBody.innerHTML = `
+                <h6>Configure your browser to use the HTTP proxy:</h6>
+                <div class="alert alert-info">
+                    <strong>HTTP Proxy:</strong> 127.0.0.1:8080<br>
+                    <strong>HTTPS Proxy:</strong> <em>Leave empty for HTTP-only mode</em>
+                </div>
+                
+                <h6>Browser Configuration:</h6>
+                <div class="accordion" id="browserConfigAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#chromeConfig">
+                                Chrome/Edge Configuration
+                            </button>
+                        </h2>
+                        <div id="chromeConfig" class="accordion-collapse collapse show" data-bs-parent="#browserConfigAccordion">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li>Open Chrome/Edge Settings</li>
+                                    <li>Go to <strong>Advanced</strong> → <strong>System</strong></li>
+                                    <li>Click <strong>Open your computer's proxy settings</strong></li>
+                                    <li>Enable <strong>Use a proxy server</strong></li>
+                                    <li>Set Address: <code>127.0.0.1</code> Port: <code>8080</code></li>
+                                    <li>Click <strong>Save</strong></li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#firefoxConfig">
+                                Firefox Configuration
+                            </button>
+                        </h2>
+                        <div id="firefoxConfig" class="accordion-collapse collapse" data-bs-parent="#browserConfigAccordion">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li>Open Firefox Settings</li>
+                                    <li>Go to <strong>General</strong> → <strong>Network Settings</strong></li>
+                                    <li>Click <strong>Settings</strong></li>
+                                    <li>Select <strong>Manual proxy configuration</strong></li>
+                                    <li>HTTP Proxy: <code>127.0.0.1</code> Port: <code>8080</code></li>
+                                    <li>Leave HTTPS Proxy empty for HTTP-only mode</li>
+                                    <li>Click <strong>OK</strong></li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning mt-3">
+                    <strong>Note:</strong> This configuration only captures HTTP traffic. HTTPS traffic will be tunneled but not captured.
+                </div>
+                
+                <div class="alert alert-success mt-3">
+                    <strong>Test your setup:</strong> Visit <a href="http://httpbin.org/get" target="_blank">http://httpbin.org/get</a> to see captured traffic.
+                </div>
+            `;
+            
+            const modal = new bootstrap.Modal(document.getElementById('setupModal'));
+            modal.show();
+        }
+
+        function loadTrafficHistory() {
+            fetch('/api/proxy/history')
+                .then(response => response.json())
+                .then(data => {
+                    trafficData = data;
+                    renderTrafficTable(data);
+                })
+                .catch(error => {
+                    console.error('Error loading traffic history:', error);
+                });
+        }
+
+        function renderTrafficTable(data) {
+            if (data.length === 0) {
+                trafficTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">
+                            <i class="fas fa-info-circle"></i> No traffic captured yet. Start the proxy and configure your browser.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            trafficTableBody.innerHTML = data.map(transaction => {
+                const time = new Date(transaction.timestamp);
+                const method = transaction.method;
+                const statusClass = getStatusClass(transaction.response_status);
+                const methodClass = `method-${method.toLowerCase()}`;
+                
+                return `
+                    <tr data-id="${transaction.id}" onclick="selectTransaction('${transaction.id}')">
+                        <td><span class="${methodClass}">${method}</span></td>
+                        <td title="${transaction.url}">${truncateUrl(transaction.url)}</td>
+                        <td>${transaction.host}</td>
+                        <td><span class="${statusClass}">${transaction.response_status}</span></td>
+                        <td>${formatBytes(transaction.response_body_size)}</td>
+                        <td>${transaction.response_time_ms}ms</td>
+                        <td>${time.toLocaleTimeString()}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function addTrafficRow(transaction) {
+            trafficData.unshift(transaction);
+            
+            // Keep only last 1000 entries in UI
+            if (trafficData.length > 1000) {
+                trafficData = trafficData.slice(0, 1000);
+            }
+            
+            renderTrafficTable(trafficData);
+        }
+
+        function selectTransaction(transactionId) {
+            selectedTransactionId = transactionId;
+            
+            // Update selected row
+            document.querySelectorAll('.traffic-table tbody tr').forEach(row => {
+                row.classList.remove('selected');
+            });
+            document.querySelector(`tr[data-id="${transactionId}"]`).classList.add('selected');
+            
+            // Load transaction details
+            fetch(`/api/proxy/transaction/${transactionId}`)
+                .then(response => response.json())
+                .then(data => {
+                    showTransactionDetails(data);
+                })
+                .catch(error => {
+                    console.error('Error loading transaction details:', error);
+                });
+        }
+
+        function showTransactionDetails(transaction) {
+            detailsPanel.innerHTML = `
+                <div class="mb-3">
+                    <h6>Request</h6>
+                    <div class="json-viewer">
+                        <pre>${JSON.stringify({
+                            method: transaction.method,
+                            url: transaction.url,
+                            headers: transaction.request_headers,
+                            body: transaction.request_body || '(empty)'
+                        }, null, 2)}</pre>
+                    </div>
+                </div>
+                <div>
+                    <h6>Response</h6>
+                    <div class="json-viewer">
+                        <pre>${JSON.stringify({
+                            status: transaction.response_status,
+                            message: transaction.response_message,
+                            headers: transaction.response_headers,
+                            body_size: transaction.response_body_size,
+                            response_time: transaction.response_time_ms + 'ms'
+                        }, null, 2)}</pre>
+                    </div>
+                </div>
+            `;
+        }
+
+        function clearHistory() {
+            if (confirm('Clear all traffic history?')) {
+                fetch('/api/proxy/clear', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            clearTrafficTable();
+                            updateStatistics();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error clearing history:', error);
+                    });
+            }
+        }
+
+        function clearTrafficTable() {
+            trafficData = [];
+            renderTrafficTable([]);
+            detailsPanel.innerHTML = `
+                <div class="text-center text-muted">
+                    <i class="fas fa-mouse-pointer fa-2x mb-3"></i>
+                    <p>Click on a request to view details</p>
+                </div>
+            `;
+        }
+
+        function exportTraffic(format) {
+            fetch(`/api/proxy/export?format=${format}`)
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    
+                    // Set appropriate file extension
+                    let filename;
+                    if (format === 'json') {
+                        filename = 'traffic_export.json';
+                    } else if (format === 'txt') {
+                        filename = 'traffic_export.log';
+                    } else {
+                        filename = `traffic_export.${format}`;
+                    }
+                    
+                    a.download = filename;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                })
+                .catch(error => {
+                    console.error('Error exporting traffic:', error);
+                    alert('Error exporting traffic. Please try again.');
+                });
+        }
+
+        function loadStatistics() {
+            fetch('/api/proxy/stats')
+                .then(response => response.json())
+                .then(data => {
+                    updateStatisticsDisplay(data);
+                })
+                .catch(error => {
+                    console.error('Error loading statistics:', error);
+                });
+        }
+
+        function updateStatistics() {
+            loadStatistics();
+        }
+
+        function updateStatisticsDisplay(stats) {
+            totalRequests.textContent = stats.total_requests || 0;
+            uniqueHosts.textContent = Object.keys(stats.hosts || {}).length;
+            avgResponseTime.textContent = (stats.avg_response_time || 0) + 'ms';
+            
+            // Update proxy status if available
+            if (stats.proxy_info) {
+                updateProxyStatus(stats.proxy_info);
+            }
+        }
+
+        function applyFilters() {
+            const filters = {
+                method: document.getElementById('methodFilter').value,
+                status: document.getElementById('statusFilter').value,
+                host: document.getElementById('hostFilter').value,
+                url_pattern: document.getElementById('urlFilter').value
+            };
+            
+            // Remove empty filters
+            Object.keys(filters).forEach(key => {
+                if (!filters[key]) delete filters[key];
+            });
+            
+            fetch('/api/proxy/history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(filters)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    renderTrafficTable(data);
+                })
+                .catch(error => {
+                    console.error('Error applying filters:', error);
+                });
+        }
+
+        function clearFilters() {
+            document.getElementById('methodFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('hostFilter').value = '';
+            document.getElementById('urlFilter').value = '';
+            loadTrafficHistory();
+        }
+
+        // Utility functions
+        function getStatusClass(status) {
+            if (status >= 200 && status < 300) return 'status-2xx';
+            if (status >= 300 && status < 400) return 'status-3xx';
+            if (status >= 400 && status < 500) return 'status-4xx';
+            if (status >= 500) return 'status-5xx';
+            return '';
+        }
+
+        function truncateUrl(url, maxLength = 50) {
+            return url.length > maxLength ? url.substring(0, maxLength) + '...' : url;
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        // Initialize
+        loadStatistics();
+    </script>
+</body>
+</html>

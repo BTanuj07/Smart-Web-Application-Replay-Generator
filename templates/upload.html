@@ -1,0 +1,525 @@
+{% extends "base.html" %}
+
+{% block title %}Upload & Analyze - AttackReplay Pro{% endblock %}
+
+{% block page_title %}Upload & Analyze{% endblock %}
+{% block page_description %}Upload log files and detect attack patterns{% endblock %}
+
+{% block content %}
+<!-- Upload Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data" id="uploadForm" action="{{ url_for('upload_analyze') }}">
+                    <!-- Drag and Drop Area -->
+                    <input type="file" class="d-none" id="log_file" name="log_file" accept=".log,.txt">
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-content text-center">
+                            <div class="feature-icon mx-auto mb-3">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <h4 class="mb-3">Drop your log files here</h4>
+                            <p class="text-muted mb-4">or click to browse and select files</p>
+                            <button type="button" class="btn btn-primary" onclick="document.getElementById('log_file').click()">
+                                <i class="fas fa-folder-open"></i> Choose Files
+                            </button>
+                        </div>
+                        <div class="upload-info mt-4">
+                            <div class="row text-center">
+                                <div class="col-md-4">
+                                    <i class="fas fa-file-alt text-primary"></i>
+                                    <small class="d-block text-muted">Supported: .log, .txt</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <i class="fas fa-weight-hanging text-success"></i>
+                                    <small class="d-block text-muted">Max size: 16MB</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <i class="fas fa-server text-info"></i>
+                                    <small class="d-block text-muted">Apache/Nginx format</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- File Info -->
+                    <div class="file-info mt-4" id="fileInfo" style="display: none;">
+                        <div class="alert alert-success d-flex align-items-center">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <div>
+                                <strong>File selected:</strong> <span id="fileName"></span>
+                                <br><small class="text-muted">Size: <span id="fileSize"></span></small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Options -->
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="card border-0" style="background: var(--secondary-color);">
+                                <div class="card-body">
+                                    <h6 class="mb-3">
+                                        <i class="fas fa-cog text-primary"></i> Analysis Options
+                                    </h6>
+                                    {% if db_available %}
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="enable_learning" name="enable_learning">
+                                        <label class="form-check-label" for="enable_learning">
+                                            <i class="fas fa-brain text-success"></i> ML Based Learning
+                                        </label>
+                                        <div class="form-text">Enable pattern learning, ML anomaly detection, and AI-based threat analysis</div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <button type="submit" class="btn btn-primary w-100" id="analyzeBtn" disabled>
+                                        <i class="fas fa-search"></i> Analyze Log File
+                                    </button>
+                                    <div id="uploadStatus" class="mt-2 text-center" style="display: none;">
+                                        <small class="text-muted">Processing...</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card border-0" style="background: var(--secondary-color);">
+                                <div class="card-body">
+                                    <h6 class="mb-3">
+                                        <i class="fas fa-rocket text-success"></i> Quick Start
+                                    </h6>
+                                    <p class="text-muted small mb-3">Try our sample data to see AttackReplay Pro in action</p>
+                                    <button type="submit" name="use_sample" class="btn btn-outline-primary w-100">
+                                        <i class="fas fa-play"></i> Use Sample Log
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.upload-area {
+    border: 3px dashed var(--border-color);
+    border-radius: 1rem;
+    padding: 3rem 2rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.upload-area:hover {
+    border-color: var(--primary-color);
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.upload-area.dragover {
+    border-color: var(--primary-color);
+    background: rgba(99, 102, 241, 0.1);
+    transform: scale(1.02);
+}
+</style>
+
+{% if analysis %}
+<!-- Analysis Results -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-bar"></i> Analysis Results
+                </h3>
+            </div>
+            <div class="card-body">
+                <!-- Stats Overview -->
+                <div class="row mb-4">
+                    <div class="col-md-4 mb-3">
+                        <div class="stats-card text-center">
+                            <div class="stats-number text-danger">{{ analysis.total_attacks }}</div>
+                            <div class="stats-label">Attacks Detected</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="stats-card text-center">
+                            <div class="stats-number text-warning">{{ analysis.unique_ips }}</div>
+                            <div class="stats-label">Unique IPs</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="stats-card text-center">
+                            <div class="stats-number text-info">{{ session.total_lines or 0 }}</div>
+                            <div class="stats-label">Log Lines</div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if analysis.total_attacks > 0 %}
+                <!-- Attack Breakdown -->
+                <div class="mb-4">
+                    <h5 class="mb-3">Attack Type Distribution</h5>
+                    <div class="row">
+                        {% for attack_type, count in analysis.attack_type_counts.items() %}
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="d-flex align-items-center p-3 border rounded">
+                                <div class="feature-icon me-3" style="width: 2.5rem; height: 2.5rem; font-size: 0.875rem;">
+                                    <i class="fas fa-bug"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ attack_type }}</h6>
+                                    <span class="badge bg-danger">{{ count }} attacks</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- AI Threat Analysis Results -->
+                {% if analysis.ml_results and analysis.ml_results.ai_threat_analysis %}
+                <div class="mb-4">
+                    <h5 class="mb-3">
+                        <i class="fas fa-brain text-warning"></i> AI Threat Analysis
+                        <span class="badge bg-warning ms-2">{{ analysis.ml_results.ai_threat_count }} threats</span>
+                    </h5>
+                    <div class="row">
+                        {% for ai_result in analysis.ml_results.ai_threat_analysis %}
+                        <div class="col-12 mb-3">
+                            <div class="card border-start border-warning border-4">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-exclamation-triangle text-warning"></i>
+                                            {{ ai_result.ai_analysis.threat_level.title() }} Threat
+                                            {% if ai_result.ai_analysis.upgrade_reason %}
+                                            <span class="badge bg-danger ms-2">Escalated</span>
+                                            {% endif %}
+                                        </h6>
+                                        <div class="text-end">
+                                            <span class="badge bg-secondary">{{ ai_result.ai_analysis.severity.title() }}</span>
+                                            <span class="badge bg-info">{{ (ai_result.ai_analysis.confidence * 100)|round }}% confidence</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <p class="mb-2"><strong>Attack Type:</strong> {{ ai_result.ai_analysis.attack_type }}</p>
+                                            <p class="mb-2"><strong>URL:</strong> <code>{{ ai_result.log_entry.url[:100] }}{% if ai_result.log_entry.url|length > 100 %}...{% endif %}</code></p>
+                                            <p class="mb-2"><strong>IP:</strong> {{ ai_result.log_entry.ip }}</p>
+                                            <p class="mb-2"><strong>Reasoning:</strong> {{ ai_result.ai_analysis.reasoning[:200] }}{% if ai_result.ai_analysis.reasoning|length > 200 %}...{% endif %}</p>
+                                            
+                                            {% if ai_result.ai_analysis.indicators %}
+                                            <p class="mb-2"><strong>Indicators:</strong>
+                                                {% for indicator in ai_result.ai_analysis.indicators %}
+                                                <span class="badge bg-light text-dark me-1">{{ indicator }}</span>
+                                                {% endfor %}
+                                            </p>
+                                            {% endif %}
+                                            
+                                            {% if ai_result.ai_analysis.upgrade_reason %}
+                                            <div class="alert alert-info py-2 mb-2">
+                                                <small><strong>Database Match:</strong> Pattern previously identified as malicious</small>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="col-md-4">
+                                            <div class="bg-light p-3 rounded">
+                                                <small class="text-muted d-block mb-1">Analysis Details</small>
+                                                <div class="mb-2">
+                                                    <small><strong>Provider:</strong> {{ ai_result.ai_analysis.ai_provider or 'Unknown' }}</small>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <small><strong>Occurrences:</strong> {{ ai_result.occurrence_count }}</small>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <small><strong>Pattern ID:</strong> {{ ai_result.pattern_signature[:8] }}...</small>
+                                                </div>
+                                                {% if ai_result.ai_analysis.analysis_timestamp %}
+                                                <div>
+                                                    <small><strong>Analyzed:</strong> {{ ai_result.ai_analysis.analysis_timestamp[:19] }}</small>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <div>
+                                <strong>AI-Based Detection:</strong> 
+                                Advanced AI analyzes unknown patterns and stores malicious threats in database for future reference.
+                                Patterns identified as malicious are automatically flagged on subsequent encounters.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Next Steps -->
+                <div class="alert alert-success">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Analysis Complete!</strong> Choose your next action:
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-eye"></i> View Details
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <a href="{{ url_for('generate_scripts') }}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-code"></i> Generate Scripts
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <a href="{{ url_for('statistics') }}" class="btn btn-outline-info w-100">
+                                <i class="fas fa-chart-pie"></i> View Analytics
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-shield-check me-3 text-success" style="font-size: 2rem;"></i>
+                        <div>
+                            <h6 class="mb-1">Clean Log File</h6>
+                            <p class="mb-0">No attacks detected. Your log file appears to be clean or may not contain recognizable attack patterns.</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Information Cards -->
+{% if not analysis %}
+<div class="row mt-4">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-info-circle"></i> Supported Formats
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h6 class="text-primary">Apache Common Log Format</h6>
+                    <div class="code-preview">192.168.1.100 - - [19/Nov/2025:10:15:23 +0000] "GET /index.php HTTP/1.1" 200 1234 "-" "Mozilla/5.0"</div>
+                </div>
+                
+                <div>
+                    <h6 class="text-success">Nginx Access Log Format</h6>
+                    <div class="code-preview">203.0.113.45 - - [19/Nov/2025:10:16:45 +0000] "GET /admin/login.php HTTP/1.1" 200 5678 "-" "Mozilla/5.0"</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-shield-alt"></i> Detection Capabilities
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-database text-danger me-2"></i>
+                            <div>
+                                <strong>SQL Injection</strong>
+                                <br><small class="text-muted">UNION SELECT, OR 1=1, etc.</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12 mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-code text-warning me-2"></i>
+                            <div>
+                                <strong>Cross-Site Scripting</strong>
+                                <br><small class="text-muted">&lt;script&gt;, onerror=, javascript:</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12 mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-folder text-info me-2"></i>
+                            <div>
+                                <strong>Directory Traversal</strong>
+                                <br><small class="text-muted">../, %2e%2e/, path manipulation</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12 mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-terminal text-success me-2"></i>
+                            <div>
+                                <strong>Command Injection</strong>
+                                <br><small class="text-muted">; ls, | cat, system commands</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-file text-primary me-2"></i>
+                            <div>
+                                <strong>File Inclusion</strong>
+                                <br><small class="text-muted">php://, LFI/RFI attacks</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('log_file');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    
+    // Drag and drop functionality
+    uploadArea.addEventListener('click', (e) => {
+        // Only trigger file dialog if clicking on the upload area itself, not buttons
+        if (e.target.tagName !== 'BUTTON' && !e.target.closest('button')) {
+            fileInput.click();
+        }
+    });
+    
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFileSelect(files[0]);
+        }
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        } else {
+            // Reset if no file selected
+            fileInfo.style.display = 'none';
+            analyzeBtn.disabled = true;
+        }
+    });
+    
+    function handleFileSelect(file) {
+        // Validate file size (16MB limit)
+        const maxSize = 16 * 1024 * 1024; // 16MB
+        if (file.size > maxSize) {
+            alert('File size exceeds 16MB limit. Please select a smaller file.');
+            fileInput.value = '';
+            return;
+        }
+        
+        // Validate file type
+        const allowedTypes = ['.log', '.txt'];
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        if (!allowedTypes.includes(fileExtension)) {
+            alert('Please select a .log or .txt file.');
+            fileInput.value = '';
+            return;
+        }
+        
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        fileInfo.style.display = 'block';
+        analyzeBtn.disabled = false;
+        
+        // Update upload area - keep the file input in the DOM
+        const uploadContent = uploadArea.querySelector('.upload-content');
+        if (uploadContent) {
+            uploadContent.innerHTML = `
+                <div class="feature-icon mx-auto mb-3">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <h5 class="mb-2">${file.name}</h5>
+                <p class="text-muted mb-3">${formatFileSize(file.size)}</p>
+                <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('log_file').click()">
+                    <i class="fas fa-exchange-alt"></i> Change File
+                </button>
+            `;
+        }
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Form validation
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        const fileInput = document.getElementById('log_file');
+        const useSample = e.submitter && e.submitter.name === 'use_sample';
+        
+        console.log('Form submission:', {
+            useSample: useSample,
+            hasFiles: fileInput.files && fileInput.files.length > 0,
+            fileName: fileInput.files && fileInput.files[0] ? fileInput.files[0].name : 'none'
+        });
+        
+        if (!useSample && (!fileInput.files || fileInput.files.length === 0)) {
+            e.preventDefault();
+            alert('Please select a file to upload or use the sample log.');
+            return false;
+        }
+        
+        // Show loading state
+        if (e.submitter) {
+            const originalText = e.submitter.innerHTML;
+            e.submitter.disabled = true;
+            e.submitter.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            
+            // Re-enable button after 10 seconds in case of issues
+            setTimeout(() => {
+                e.submitter.disabled = false;
+                e.submitter.innerHTML = originalText;
+            }, 10000);
+        }
+    });
+});
+</script>
+{% endblock %}

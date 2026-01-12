@@ -1,0 +1,428 @@
+{% extends "base.html" %}
+
+{% block title %}Batch Processing - Smart Web Attack Replay Generator{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="mb-0"><i class="fas fa-layer-group"></i> Batch Log Processing</h3>
+            </div>
+            <div class="card-body">
+                <p class="lead">Upload and analyze multiple log files simultaneously</p>
+                
+                <form id="batchForm" enctype="multipart/form-data">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="batch_files" class="form-label">Choose Multiple Log Files</label>
+                                <input type="file" class="form-control" id="batch_files" name="files[]" multiple accept=".log,.txt">
+                                <div class="form-text">Select multiple Apache/Nginx log files for batch processing</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Analysis Options</label>
+                                
+                                {% if db_available %}
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="batch_enable_learning" name="enable_learning">
+                                    <label class="form-check-label" for="batch_enable_learning">
+                                        <i class="fas fa-brain text-success"></i> ML Based Learning
+                                    </label>
+                                    <div class="form-text small">Enable pattern learning, ML anomaly detection, and AI-based threat analysis</div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-rocket"></i> Process All Files
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <div id="batchProgress" class="mt-4" style="display: none;">
+                    <div class="d-flex justify-content-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Processing...</span>
+                        </div>
+                    </div>
+                    <p class="text-center mt-2">Processing multiple files...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="batchResults" class="row mt-4" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="fas fa-chart-bar"></i> Batch Processing Summary</h4>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-2">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <h3 id="totalFiles" class="text-primary">0</h3>
+                                <p class="mb-0">Total Files</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <h3 id="successfulFiles" class="text-success">0</h3>
+                                <p class="mb-0">Successful</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <h3 id="totalAttacks" class="text-danger">0</h3>
+                                <p class="mb-0">Total Attacks</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <h3 id="uniqueIPs" class="text-warning">0</h3>
+                                <p class="mb-0">Unique IPs</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <h3 id="mlAnomalies" class="text-info">0</h3>
+                                <p class="mb-0">ML Anomalies</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <h3 id="aiThreats" class="text-warning">0</h3>
+                                <p class="mb-0">AI Threats</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- AI/ML Summary Section -->
+                <div id="aiMlSummary" class="mb-4" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="fas fa-robot"></i> ML Detection Summary</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row text-center">
+                                        <div class="col-4">
+                                            <div class="mb-2">
+                                                <strong id="mlAnomalyCount" class="text-info">0</strong>
+                                                <br><small class="text-muted">ML Anomalies</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="mb-2">
+                                                <strong id="behavioralAnomalyCount" class="text-primary">0</strong>
+                                                <br><small class="text-muted">Behavioral</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="mb-2">
+                                                <strong id="suspiciousPatternCount" class="text-warning">0</strong>
+                                                <br><small class="text-muted">Suspicious Patterns</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0"><i class="fas fa-brain"></i> AI Threat Analysis</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row text-center">
+                                        <div class="col-4">
+                                            <div class="mb-2">
+                                                <strong id="aiThreatCount" class="text-warning">0</strong>
+                                                <br><small class="text-muted">AI Threats</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="mb-2">
+                                                <strong id="escalatedThreats" class="text-danger">0</strong>
+                                                <br><small class="text-muted">Escalated</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="mb-2">
+                                                <strong id="aiProvidersUsed" class="text-success">0</strong>
+                                                <br><small class="text-muted">AI Providers</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="aiProvidersList" class="mt-2 text-center">
+                                        <small class="text-muted">Providers: <span id="providerNames">None</span></small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="attackDistribution" class="mb-4" style="display: none;">
+                    <h5>Attack Distribution Across All Files</h5>
+                    <canvas id="batchAttackChart" width="400" height="200"></canvas>
+                </div>
+                
+                <div id="individualResults">
+                    <h5>Individual File Results</h5>
+                    <div id="fileResultsContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Batch Processing Benefits</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check text-success"></i> Process multiple log files at once</li>
+                    <li><i class="fas fa-check text-success"></i> Combined attack statistics</li>
+                    <li><i class="fas fa-check text-success"></i> Unified threat analysis</li>
+                    <li><i class="fas fa-check text-success"></i> Cross-file pattern correlation</li>
+                    <li><i class="fas fa-check text-success"></i> ML-based anomaly detection</li>
+                    <li><i class="fas fa-check text-success"></i> AI-powered progressive threat learning</li>
+                    {% if db_available %}
+                    <li><i class="fas fa-check text-success"></i> Persistent storage of all results</li>
+                    {% else %}
+                    <li><i class="fas fa-times text-muted"></i> Persistent storage (requires database)</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Tips for Batch Processing</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-arrow-right text-primary"></i> Use consistent log formats across files</li>
+                    <li><i class="fas fa-arrow-right text-primary"></i> Group logs by time period for trend analysis</li>
+                    <li><i class="fas fa-arrow-right text-primary"></i> Enable ML detection for unknown attack discovery</li>
+                    <li><i class="fas fa-arrow-right text-primary"></i> Use AI analysis for progressive threat learning</li>
+                    <li><i class="fas fa-arrow-right text-primary"></i> Process files from different servers together</li>
+                    <li><i class="fas fa-arrow-right text-primary"></i> Review individual results for detailed insights</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const batchForm = document.getElementById('batchForm');
+    const progress = document.getElementById('batchProgress');
+    const results = document.getElementById('batchResults');
+    
+    batchForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(batchForm);
+        const files = document.getElementById('batch_files').files;
+        
+        if (files.length === 0) {
+            alert('Please select at least one file to process.');
+            return;
+        }
+        
+        // Show progress
+        progress.style.display = 'block';
+        results.style.display = 'none';
+        
+        fetch('/batch_process', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            progress.style.display = 'none';
+            
+            if (data.success) {
+                displayBatchResults(data.summary, data.results, data.ai_summary, data.processing_options);
+                results.style.display = 'block';
+            } else {
+                alert('Error processing files: ' + data.error);
+            }
+        })
+        .catch(error => {
+            progress.style.display = 'none';
+            alert('Error processing files: ' + error);
+        });
+    });
+    
+    function displayBatchResults(summary, results, aiSummary, processingOptions) {
+        // Update summary cards
+        document.getElementById('totalFiles').textContent = summary.total_files;
+        document.getElementById('successfulFiles').textContent = summary.successful;
+        document.getElementById('totalAttacks').textContent = summary.total_attacks;
+        document.getElementById('uniqueIPs').textContent = summary.unique_ips;
+        document.getElementById('mlAnomalies').textContent = summary.total_ml_anomalies || 0;
+        document.getElementById('aiThreats').textContent = summary.total_ai_threats || 0;
+        
+        // Show AI/ML summary if advanced detection was enabled
+        if (summary.advanced_detection_enabled) {
+            document.getElementById('aiMlSummary').style.display = 'block';
+            
+            // Update ML statistics
+            document.getElementById('mlAnomalyCount').textContent = summary.total_ml_anomalies || 0;
+            document.getElementById('behavioralAnomalyCount').textContent = summary.total_behavioral_anomalies || 0;
+            document.getElementById('suspiciousPatternCount').textContent = summary.total_suspicious_patterns || 0;
+            
+            // Update AI statistics
+            document.getElementById('aiThreatCount').textContent = summary.total_ai_threats || 0;
+            
+            if (aiSummary && aiSummary.database_stats) {
+                document.getElementById('escalatedThreats').textContent = aiSummary.database_stats.escalated_threats || 0;
+                document.getElementById('aiProvidersUsed').textContent = aiSummary.ai_providers_used ? aiSummary.ai_providers_used.length : 0;
+                document.getElementById('providerNames').textContent = aiSummary.ai_providers_used ? aiSummary.ai_providers_used.join(', ') : 'None';
+            }
+        }
+        
+        // Show attack distribution chart if there are attacks
+        if (summary.total_attacks > 0 && summary.attack_type_counts) {
+            document.getElementById('attackDistribution').style.display = 'block';
+            
+            const ctx = document.getElementById('batchAttackChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(summary.attack_type_counts),
+                    datasets: [{
+                        data: Object.values(summary.attack_type_counts),
+                        backgroundColor: [
+                            '#dc3545', '#fd7e14', '#ffc107', '#28a745', '#20c997', 
+                            '#17a2b8', '#6f42c1', '#e83e8c', '#6c757d', '#343a40'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Display individual file results
+        const container = document.getElementById('fileResultsContainer');
+        container.innerHTML = '';
+        
+        results.forEach(result => {
+            const resultCard = document.createElement('div');
+            resultCard.className = 'card mb-3';
+            
+            if (result.success) {
+                // Build enhanced result display
+                let mlInfo = '';
+                if (result.ml_enabled) {
+                    mlInfo = `
+                        <div class="col-md-12 mt-2">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <small><strong>ML Anomalies:</strong> ${result.ml_anomaly_count || 0}</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <small><strong>Behavioral:</strong> ${result.behavioral_anomaly_count || 0}</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <small><strong>AI Threats:</strong> ${result.ai_threat_count || 0}</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <small><strong>Suspicious Patterns:</strong> ${result.suspicious_pattern_count || 0}</small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                let statusBadges = '';
+                if (result.ml_enabled) statusBadges += '<span class="badge bg-info me-1">ML</span>';
+                if (result.ai_enabled) statusBadges += '<span class="badge bg-warning me-1">AI</span>';
+                
+                resultCard.innerHTML = `
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0">✅ ${result.filename} - ${result.analysis.total_attacks} attacks ${statusBadges}</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <strong>Total Lines:</strong> ${result.total_lines}
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Parsed Lines:</strong> ${result.parsed_lines}
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Attacks Found:</strong> ${result.analysis.total_attacks}
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Unique IPs:</strong> ${result.analysis.unique_ips}
+                            </div>
+                            ${mlInfo}
+                        </div>
+                        ${result.analysis.attack_type_counts && Object.keys(result.analysis.attack_type_counts).length > 0 ? 
+                            '<div class="mt-2"><strong>Attack Breakdown:</strong> ' + 
+                            Object.entries(result.analysis.attack_type_counts).map(([type, count]) => 
+                                `<span class="badge bg-danger me-1">${type}: ${count}</span>`
+                            ).join('') + '</div>' : ''
+                        }
+                    </div>
+                `;
+            } else {
+                resultCard.innerHTML = `
+                    <div class="card-header bg-danger text-white">
+                        <h6 class="mb-0">❌ ${result.filename} - Failed</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-danger mb-0">
+                            <strong>Error:</strong> ${result.error}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.appendChild(resultCard);
+        });
+    }
+});
+</script>
+{% endblock %}

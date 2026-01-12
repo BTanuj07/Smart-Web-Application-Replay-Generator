@@ -1,0 +1,16 @@
+{
+  "name": "AttackReplay Pro",
+  "short_name": "AttackReplay",
+  "description": "Smart Web Application Attack Replay Generator",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#6366f1",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "/static/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

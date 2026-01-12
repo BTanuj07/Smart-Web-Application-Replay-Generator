@@ -1,0 +1,375 @@
+{% extends "base.html" %}
+
+{% block title %}Statistics - AttackReplay Pro{% endblock %}
+
+{% block page_title %}Statistics & Analytics{% endblock %}
+{% block page_description %}Comprehensive attack analysis and reporting{% endblock %}
+
+{% block header_actions %}
+{% if analysis and analysis.total_attacks > 0 %}
+<button id="exportBtn" class="btn btn-primary">
+    <i class="fas fa-download"></i> Export Report
+</button>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if analysis and analysis.total_attacks > 0 %}
+
+<!-- Statistics Overview -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="stats-card">
+            <div class="stats-number text-danger">{{ analysis.total_attacks }}</div>
+            <div class="stats-label">Total Attacks</div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="stats-card">
+            <div class="stats-number text-warning">{{ analysis.unique_ips }}</div>
+            <div class="stats-label">Unique IPs</div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="stats-card">
+            <div class="stats-number text-info">{{ session.total_lines or 0 }}</div>
+            <div class="stats-label">Log Lines</div>
+        </div>
+    </div>
+</div>
+
+<!-- Attack Distribution Chart -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-pie"></i> Attack Type Distribution
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-8">
+                        <canvas id="attackTypeChart" style="max-height: 400px;"></canvas>
+                    </div>
+                    <div class="col-lg-4">
+                        <h6 class="mb-3">Attack Summary</h6>
+                        <div class="attack-legend">
+                            {% for attack_type, count in analysis.attack_type_counts.items() %}
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                                <div class="d-flex align-items-center">
+                                    <div class="legend-color me-2" style="background: {{ ['#dc3545', '#fd7e14', '#ffc107', '#28a745', '#20c997', '#17a2b8', '#6f42c1', '#e83e8c'][loop.index0 % 8] }}"></div>
+                                    <span class="small">{{ attack_type }}</span>
+                                </div>
+                                <div>
+                                    <span class="badge bg-danger">{{ count }}</span>
+                                    <small class="text-muted ms-1">{{ "%.1f"|format((count / analysis.total_attacks * 100)) }}%</small>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Detailed Analysis -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-bar"></i> Attack Breakdown
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Attack Type</th>
+                                <th class="text-center">Count</th>
+                                <th class="text-center">Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for attack_type, count in analysis.attack_type_counts.items() %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="feature-icon me-2" style="width: 2rem; height: 2rem; font-size: 0.75rem;">
+                                            <i class="fas fa-bug"></i>
+                                        </div>
+                                        {{ attack_type }}
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-danger">{{ count }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-danger" role="progressbar" 
+                                             style="width: {{ (count / analysis.total_attacks * 100) }}%">
+                                            {{ "%.1f"|format((count / analysis.total_attacks * 100)) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-globe"></i> Top Attacking IPs
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>IP Address</th>
+                                <th class="text-center">Attacks</th>
+                                <th class="text-center">Threat Level</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set ip_counts = {} %}
+                            {% for ip, attacks in analysis.ip_attacks.items() %}
+                                {% set _ = ip_counts.update({ip: attacks|length}) %}
+                            {% endfor %}
+                            {% set sorted_ips = ip_counts.items()|sort(attribute=1, reverse=true) %}
+                            {% for ip, count in sorted_ips[:10] %}
+                            <tr>
+                                <td>
+                                    <code class="bg-light p-1 rounded">{{ ip }}</code>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-warning">{{ count }}</span>
+                                </td>
+                                <td class="text-center">
+                                    {% if count >= 5 %}
+                                        <span class="badge bg-danger">High</span>
+                                    {% elif count >= 3 %}
+                                        <span class="badge bg-warning">Medium</span>
+                                    {% else %}
+                                        <span class="badge bg-info">Low</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Analysis Insights -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-lightbulb"></i> Security Insights
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-start">
+                            <div class="feature-icon me-3" style="width: 3rem; height: 3rem;">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div>
+                                <h6>Most Common Attack</h6>
+                                {% set sorted_attacks = analysis.attack_type_counts.items()|sort(attribute=1, reverse=true) %}
+                                {% set most_common = sorted_attacks[0] %}
+                                <p class="text-muted mb-0">{{ most_common[0] }} ({{ most_common[1] }} attempts)</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-start">
+                            <div class="feature-icon me-3" style="width: 3rem; height: 3rem;">
+                                <i class="fas fa-crosshairs"></i>
+                            </div>
+                            <div>
+                                <h6>Attack Diversity</h6>
+                                <p class="text-muted mb-0">{{ analysis.attack_type_counts|length }} different attack types detected</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-start">
+                            <div class="feature-icon me-3" style="width: 3rem; height: 3rem;">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <div>
+                                <h6>Risk Assessment</h6>
+                                {% set risk_level = "High" if analysis.total_attacks > 10 else "Medium" if analysis.total_attacks > 5 else "Low" %}
+                                <p class="text-muted mb-0">
+                                    <span class="badge bg-{{ 'danger' if risk_level == 'High' else 'warning' if risk_level == 'Medium' else 'success' }}">
+                                        {{ risk_level }} Risk
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- No Data State -->
+<div class="row">
+    <div class="col-12">
+        <div class="card text-center">
+            <div class="card-body py-5">
+                <div class="feature-icon mx-auto mb-4" style="background: var(--secondary-color); color: var(--text-secondary);">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+                <h4 class="mb-3">No Analysis Data Available</h4>
+                <p class="text-muted mb-4">Upload and analyze a log file to see comprehensive statistics and insights.</p>
+                <a href="{{ url_for('upload_analyze') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-upload"></i> Upload & Analyze Log File
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<style>
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    display: inline-block;
+}
+
+.attack-legend {
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.progress {
+    background-color: var(--secondary-color);
+}
+</style>
+
+{% if analysis and analysis.total_attacks > 0 %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Attack Type Distribution Chart
+    const ctx = document.getElementById('attackTypeChart').getContext('2d');
+    const attackData = {{ analysis.attack_type_counts|tojson }};
+    
+    const colors = [
+        '#dc3545', '#fd7e14', '#ffc107', '#28a745', '#20c997', 
+        '#17a2b8', '#6f42c1', '#e83e8c', '#6c757d', '#343a40'
+    ];
+    
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(attackData),
+            datasets: [{
+                data: Object.values(attackData),
+                backgroundColor: colors,
+                borderWidth: 3,
+                borderColor: '#fff',
+                hoverBorderWidth: 4,
+                hoverOffset: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: 'var(--primary-color)',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return context.label + ': ' + context.parsed + ' attacks (' + percentage + '%)';
+                        }
+                    }
+                }
+            },
+            cutout: '60%',
+            animation: {
+                animateRotate: true,
+                duration: 1000
+            }
+        }
+    });
+    
+    // Export functionality
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', function() {
+            // Show loading state
+            const originalText = this.innerHTML;
+            this.innerHTML = '<div class="loading"><div class="spinner"></div> Generating...</div>';
+            this.disabled = true;
+            
+            setTimeout(() => {
+                const report = {
+                    generated_at: new Date().toISOString(),
+                    summary: {
+                        total_attacks: {{ analysis.total_attacks }},
+                        unique_ips: {{ analysis.unique_ips }},
+                        total_lines: {{ session.total_lines or 0 }},
+                        analysis_date: new Date().toLocaleDateString()
+                    },
+                    attack_breakdown: {{ analysis.attack_type_counts|tojson }},
+                    ip_analysis: {{ analysis.ip_attacks|tojson }},
+                    detailed_attacks: {{ analysis.attacks|tojson }}
+                };
+                
+                const dataStr = JSON.stringify(report, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(dataBlob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `attack_analysis_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                // Reset button
+                this.innerHTML = originalText;
+                this.disabled = false;
+            }, 1000);
+        });
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

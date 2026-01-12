@@ -1,0 +1,47 @@
+/* Sidebar Scrolling Fix */
+.sidebar {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.sidebar-header {
+    flex-shrink: 0 !important;
+}
+
+.sidebar-nav {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    flex: 1 !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: #e2e8f0 transparent !important;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+    width: 6px !important;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+    background: transparent !important;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+    background: #e2e8f0 !important;
+    border-radius: 3px !important;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+    background: #64748b !important;
+}
+
+/* Ensure nav items don't get cut off */
+.nav-item {
+    flex-shrink: 0 !important;
+}
+
+/* Add some padding at the bottom for better scrolling */
+.sidebar-nav::after {
+    content: '';
+    display: block;
+    height: 1rem;
+    flex-shrink: 0;
+}

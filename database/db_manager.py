@@ -9,10 +9,19 @@ try:
 except ImportError:
     PSYCOPG2_AVAILABLE = False
 
+# Import SQLite fallback
+from .sqlite_manager import SQLiteDatabaseManager
+
 class DatabaseManager:
     def __init__(self):
+        # Try PostgreSQL first, fall back to SQLite
+        self.use_sqlite = False
+        
         if not PSYCOPG2_AVAILABLE:
-            self.db_available = False
+            print("📝 PostgreSQL not available, using SQLite database")
+            self.use_sqlite = True
+            self.sqlite_manager = SQLiteDatabaseManager()
+            self.db_available = True
             return
         
         self.connection_params = {
@@ -22,7 +31,21 @@ class DatabaseManager:
             'host': os.getenv('PGHOST'),
             'port': os.getenv('PGPORT')
         }
+        
+        if not all([self.connection_params['dbname'], self.connection_params['user'], self.connection_params['password']]):
+            print("📝 PostgreSQL credentials not found, using SQLite database")
+            self.use_sqlite = True
+            self.sqlite_manager = SQLiteDatabaseManager()
+            self.db_available = True
+            return
+            
         self.db_available = self._check_database_available()
+        
+        if not self.db_available:
+            print("📝 PostgreSQL connection failed, using SQLite database")
+            self.use_sqlite = True
+            self.sqlite_manager = SQLiteDatabaseManager()
+            self.db_available = True
     
     def _check_database_available(self) -> bool:
         if not PSYCOPG2_AVAILABLE or not all(self.connection_params.values()):
@@ -44,6 +67,9 @@ class DatabaseManager:
     
     def save_analysis(self, filename: str, total_lines: int, total_attacks: int, 
                      unique_ips: int, attack_breakdown: Dict, attacks_data: List[Dict]) -> int:
+        if self.use_sqlite:
+            return self.sqlite_manager.save_analysis(filename, total_lines, total_attacks, unique_ips, attack_breakdown, attacks_data)
+            
         conn = self.get_connection()
         try:
             with conn.cursor() as cursor:
@@ -60,7 +86,41 @@ class DatabaseManager:
         finally:
             conn.close()
     
+    def get_analysis_by_id(self, analysis_id: int) -> Dict:
+        """Get specific analysis with full attack data."""
+        if self.use_sqlite:
+            return self.sqlite_manager.get_analysis_by_id(analysis_id)
+            
+        conn = self.get_connection()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT id, filename, total_lines, total_attacks, unique_ips, 
+                           attack_breakdown, attacks_data, analyzed_at
+                    FROM analysis_history
+                    WHERE id = %s
+                """, (analysis_id,))
+                
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        'id': row[0],
+                        'filename': row[1],
+                        'total_lines': row[2],
+                        'total_attacks': row[3],
+                        'unique_ips': row[4],
+                        'attack_breakdown': row[5],
+                        'attacks_data': row[6],
+                        'analyzed_at': row[7]
+                    }
+                return None
+        finally:
+            conn.close()
+    
     def get_analysis_history(self, limit: int = 50) -> List[Dict]:
+        if self.use_sqlite:
+            return self.sqlite_manager.get_analysis_history(limit)
+            
         conn = self.get_connection()
         try:
             with conn.cursor() as cursor:
@@ -88,6 +148,9 @@ class DatabaseManager:
             conn.close()
     
     def get_timeline_data(self, days: int = 30) -> List[Dict]:
+        if self.use_sqlite:
+            return self.sqlite_manager.get_timeline_data(days)
+            
         conn = self.get_connection()
         try:
             with conn.cursor() as cursor:
@@ -116,6 +179,9 @@ class DatabaseManager:
     
     def add_custom_pattern(self, attack_type: str, pattern_regex: str, 
                           description: str = "") -> int:
+        if self.use_sqlite:
+            return self.sqlite_manager.add_custom_pattern(attack_type, pattern_regex, description)
+            
         conn = self.get_connection()
         try:
             with conn.cursor() as cursor:
@@ -131,6 +197,9 @@ class DatabaseManager:
             conn.close()
     
     def get_custom_patterns(self, active_only: bool = True) -> List[Dict]:
+        if self.use_sqlite:
+            return self.sqlite_manager.get_custom_patterns(active_only)
+            
         conn = self.get_connection()
         try:
             with conn.cursor() as cursor:
@@ -162,9 +231,29 @@ class DatabaseManager:
         finally:
             conn.close()
     
+    def update_custom_pattern_status(self, pattern_id: int, is_active: bool):
+        """Update the active status of a custom pattern."""
+        if self.use_sqlite:
+            return self.sqlite_manager.update_custom_pattern_status(pattern_id, is_active)
+            
+        conn = self.get_connection()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    UPDATE custom_patterns
+                    SET is_active = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                """, (is_active, pattern_id))
+                conn.commit()
+        finally:
+            conn.close()
+    
     def update_custom_pattern(self, pattern_id: int, attack_type: str = None, 
                              pattern_regex: str = None, description: str = None,
                              is_active: bool = None):
+        if self.use_sqlite:
+            return self.sqlite_manager.update_custom_pattern(pattern_id, attack_type, pattern_regex, description, is_active)
+            
         conn = self.get_connection()
         try:
             with conn.cursor() as cursor:
@@ -197,6 +286,9 @@ class DatabaseManager:
             conn.close()
     
     def delete_custom_pattern(self, pattern_id: int):
+        if self.use_sqlite:
+            return self.sqlite_manager.delete_custom_pattern(pattern_id)
+            
         conn = self.get_connection()
         try:
             with conn.cursor() as cursor:
@@ -207,6 +299,9 @@ class DatabaseManager:
     
     def track_unknown_attack(self, url: str, ip: str, timestamp: str, 
                             method: str, user_agent: str):
+        if self.use_sqlite:
+            return self.sqlite_manager.track_unknown_attack(url, ip, timestamp, method, user_agent)
+            
         conn = self.get_connection()
         try:
             with conn.cursor() as cursor:
@@ -222,6 +317,9 @@ class DatabaseManager:
             conn.close()
     
     def get_unknown_attacks(self, limit: int = 100) -> List[Dict]:
+        if self.use_sqlite:
+            return self.sqlite_manager.get_unknown_attacks(limit)
+            
         conn = self.get_connection()
         try:
             with conn.cursor() as cursor:
@@ -249,6 +347,9 @@ class DatabaseManager:
             conn.close()
     
     def clear_unknown_attacks(self):
+        if self.use_sqlite:
+            return self.sqlite_manager.clear_unknown_attacks()
+            
         conn = self.get_connection()
         try:
             with conn.cursor() as cursor:

